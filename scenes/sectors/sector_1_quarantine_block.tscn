@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/layout/layout_sector.gd" id="1_layout"]
+[ext_resource type="Script" path="res://scripts/layout/plans/sector1_quarantine_block.gd" id="2_plan"]
+
+[node name="Sector1QuarantineBlock" type="Node3D"]
+script = ExtResource("1_layout")
+plan_source = ExtResource("2_plan")
+sector_id = 1
+sector_name = "SECTOR 01: QUARANTINE BLOCK"
+sector_bounds = Rect2(-30, -56, 60, 94)

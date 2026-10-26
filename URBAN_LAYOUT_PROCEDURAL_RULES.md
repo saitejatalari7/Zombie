@@ -7,6 +7,12 @@ This document establishes the mandatory design rules, sightline geometry, and pr
 
 ## 1. Camera Sightline & Occlusion Geometry (Zero Blindspots)
 
+> **Correction (verified against `scripts/camera_follow.gd`):** the camera sits at player + **(9.9, 33, 23.1)**, i.e. **south-EAST** of the player (screen right and screen bottom), not south-west. Its view line climbs **1.31 m per metre** of horizontal distance. So:
+> * Tall buildings belong on the **north and west** edges of walkable space.
+> * On the **south and east** edges, a wall at horizontal distance *d* (measured toward the camera) may be at most about **1.31 × d** tall, or it hides the player.
+> * `tools/level_design/sector1_plan.py` enforces this automatically by ray-casting every walkable cell to the camera and lowering offending blocks. Run it after any layout change.
+> The diagram and quadrant names below predate this correction; where they disagree, this note wins.
+
 In an isometric / elevated top-down perspective, any tall structure positioned between the camera and the playable street will occlude the player, zombies, and combat feedback. Relying on transparency / raycast fading is only an emergency fail-safe—**the layout geometry itself must eliminate occlusion natively**.
 
 ```

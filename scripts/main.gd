@@ -14,7 +14,7 @@ extends Node3D
 var waypoint_arrow_scene := preload("res://scenes/waypoint_arrow.tscn")
 
 const SECTOR_SCENES: Dictionary = {
-	1: preload("res://scenes/sectors/sector_1_residential.tscn"),
+	1: preload("res://scenes/sectors/sector_1_quarantine_block.tscn"),
 	2: preload("res://scenes/sectors/sector_2_transit.tscn"),
 	3: preload("res://scenes/sectors/sector_3_industrial.tscn"),
 	4: preload("res://scenes/sectors/sector_4_research.tscn")
