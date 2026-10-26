@@ -3,7 +3,9 @@ class_name IsometricCameraFollow
 
 @export var target: Node3D
 @export var smooth_speed: float = 7.0
-@export var offset: Vector3 = Vector3(18.0, 60.0, 42.0)
+## Same viewing angle as the original (18, 60, 42) at 55 percent of the distance, so
+## characters read on a phone. Level layouts depend only on this direction, not the distance.
+@export var offset: Vector3 = Vector3(9.9, 33.0, 23.1)
 
 var trauma: float = 0.0
 var max_shake_offset: float = 0.10
