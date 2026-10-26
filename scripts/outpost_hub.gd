@@ -142,7 +142,7 @@ func _lock_unreleased_content() -> void:
 	}
 	for weapon_id in weapon_buttons:
 		var btn: Button = weapon_buttons[weapon_id]
-		if btn and weapon_id not in GameManager.IMPLEMENTED_WEAPONS:
+		if btn and not (weapon_id in GameManager.IMPLEMENTED_WEAPONS):
 			btn.disabled = true
 			btn.text += "\nIN DEVELOPMENT"
 	if btn_tab_skills:
@@ -436,7 +436,7 @@ func _build_skill_matrix_ui() -> void:
 		child.queue_free()
 	
 	for skill_id in skills_data:
-		if skill_id not in GameManager.IMPLEMENTED_SKILLS:
+		if not (skill_id in GameManager.IMPLEMENTED_SKILLS):
 			continue
 		var data: Dictionary = skills_data[skill_id]
 		

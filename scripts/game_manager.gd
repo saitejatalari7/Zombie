@@ -792,7 +792,7 @@ func _refund_unreleased_purchases() -> void:
 				pending_refund_sc += int(WEAPON_UPGRADE_COST_STEP * lv * (lv + 1) * 0.5)
 				weapon_upgrades[weapon_id][track] = 0
 	for skill_id in unlocked_skills.keys():
-		if skill_id not in IMPLEMENTED_SKILLS:
+		if not (skill_id in IMPLEMENTED_SKILLS):
 			pending_refund_rc += int(SKILLS_DATA.get(skill_id, {}).get("cost_rc", 0))
 			unlocked_skills.erase(skill_id)
 	for slot in range(2):

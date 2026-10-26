@@ -563,9 +563,7 @@ func trigger_shoulder_charge() -> bool:
 		if d > SHOULDER_CHARGE_RADIUS or d < 0.001:
 			continue
 		var strength := 1.0 - (d / SHOULDER_CHARGE_RADIUS) * 0.5
-		z.knockback_velocity += (diff / d) * 14.0 * strength
-		z.state = Zombie.State.STAGGER
-		z.stagger_timer = 0.45
+		z.apply_stagger((diff / d) * 14.0 * strength, 0.45)
 	visual_root.position.y = 0.12
 	var cam := get_viewport().get_camera_3d()
 	if cam and cam.has_method("add_trauma"):

@@ -317,6 +317,14 @@ func _set_head_color(col: Color) -> void:
 	for child in head_mesh.find_children("", "MeshInstance3D", true, false):
 		child.set_instance_shader_parameter("albedo_override", col)
 
+## Shoves the zombie and interrupts whatever it was doing (used by the Shoulder Charge).
+func apply_stagger(impulse: Vector3, duration: float) -> void:
+	if is_dead:
+		return
+	knockback_velocity += impulse
+	state = State.STAGGER
+	stagger_timer = maxf(stagger_timer, duration)
+
 func ignite(duration: float = 6.0) -> void:
 	if is_dead:
 		return

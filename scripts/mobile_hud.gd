@@ -233,7 +233,7 @@ func _on_climb_pressed() -> void:
 		# Contextual: vault a ledge > shoulder-charge a nearby horde > jump
 		if player.can_vault:
 			player.trigger_vault()
-		elif player.has_zombie_within(player.SHOULDER_CHARGE_RADIUS):
+		elif player.has_zombie_within(Player.SHOULDER_CHARGE_RADIUS):
 			if not player.trigger_shoulder_charge():
 				player.jump()
 		else:

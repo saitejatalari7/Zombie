@@ -15,11 +15,16 @@ var player: Player = null
 var met: bool = false
 
 
+## Loaded by path so this base class doesn't reference its own subclasses.
+const JOB_SCRIPTS: Dictionary = {
+	"kill_quota": "res://scripts/jobs/kill_quota_job.gd",
+	"asset_recovery": "res://scripts/jobs/asset_recovery_job.gd",
+}
+
+
 static func create(job_id: String) -> MissionJob:
-	match job_id:
-		"asset_recovery":
-			return AssetRecoveryJob.new()
-	return KillQuotaJob.new()
+	var path: String = JOB_SCRIPTS.get(job_id, JOB_SCRIPTS["kill_quota"])
+	return load(path).new() as MissionJob
 
 
 func setup(p_contract: Dictionary, p_sector: SectorBase, p_player: Player) -> void:
