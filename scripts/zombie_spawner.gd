@@ -147,6 +147,10 @@ func _on_zombie_died(_zombie: Zombie) -> void:
 	total_kills += 1
 	kills_in_current_wave += 1
 	
+	var gm = get_node_or_null("/root/GameManager")
+	if gm and is_instance_valid(_zombie):
+		gm.record_kill(_zombie.get_enemy_type())
+	
 	# 10% chance to drop Molotov Power-Up on zombie death
 	if randf() < 0.10 and is_instance_valid(_zombie):
 		var p: Node3D = powerup_scene.instantiate()

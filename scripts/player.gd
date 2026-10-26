@@ -9,6 +9,7 @@ signal rocket_ammo_changed(current: int, max_val: int)
 signal molotov_ammo_changed(current: int, max_val: int)
 signal vault_state_changed(can_vault: bool)
 signal auto_fire_toggled(enabled: bool)
+signal died()
 
 @export var move_speed: float = 6.2
 @export var rifle_fire_rate: float = 0.11
@@ -22,6 +23,7 @@ var aim_arrow_indicator: AimTrajectoryArrow = null
 
 var max_health: float = 100.0
 var current_health: float = 100.0
+var is_dead: bool = false
 
 var can_fire_rifle: bool = true
 var fire_timer: float = 0.0
@@ -117,6 +119,12 @@ func _ready() -> void:
 	floor_snap_length = 0.45
 	floor_max_angle = deg_to_rad(45.0)
 	floor_stop_on_slope = true
+	
+	# Field Medbay outpost upgrade: bonus starting health
+	var gm = get_node_or_null("/root/GameManager")
+	if gm:
+		max_health += gm.get_medbay_health_bonus()
+		current_health = max_health
 	
 	emit_signal("health_changed", current_health, max_health)
 	emit_signal("super_blast_cooldown", 0.0)
@@ -829,6 +837,8 @@ func _get_nearest_zombie(max_dist: float) -> Node3D:
 	return closest
 
 func take_damage(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
+	if is_dead:
+		return
 	current_health = maxf(0.0, current_health - amount)
 	emit_signal("health_changed", current_health, max_health)
 	
@@ -841,4 +851,8 @@ func take_damage(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	
 	if current_health <= 0.0:
 		# Player death
+		is_dead = true
 		set_physics_process(false)
+		mobile_fire_pressed = false
+		cancel_aim_special()
+		emit_signal("died")

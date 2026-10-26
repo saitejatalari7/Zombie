@@ -72,6 +72,14 @@ func _ready() -> void:
 	
 	_find_player()
 
+## Reward category used by GameManager.record_kill().
+func get_enemy_type() -> String:
+	if is_in_group("bosses"):
+		return "tank"
+	if is_in_group("runners"):
+		return "runner"
+	return "shambler"
+
 func _find_player() -> void:
 	var players := get_tree().get_nodes_in_group("player")
 	if players.size() > 0:

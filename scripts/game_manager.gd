@@ -12,12 +12,83 @@ signal skill_equipped(slot: int, skill_id: String)
 signal weapon_upgraded(weapon_id: String, track: String, new_level: int)
 signal outpost_upgraded(facility: String, new_level: int)
 signal in_run_loot_changed(current_sc: int, current_rc: int)
+signal in_run_kills_changed(total_run_kills: int)
+signal mission_resolved(summary: Dictionary)
 signal game_saved()
 signal game_loaded()
 
 # ─── Constants ─────────────────────────────────────────────────────────────────
 const SAVE_PATH := "user://protocol_crimson_save.dat"
+const SAVE_TMP_PATH := "user://protocol_crimson_save.tmp"
+const SAVE_BACKUP_PATH := "user://protocol_crimson_save.bak"
 const SAVE_KEY := "CR1MS0N_PR0T0C0L_K3Y"
+const SAVE_VERSION := 2
+
+## Contract dossiers per Sector. Single source of truth for the Command Board
+## text AND the actual payout, so the hub can never advertise one reward and pay another.
+const CONTRACTS: Dictionary = {
+	1: {
+		"title": "SECTOR 01: RESIDENTIAL EXTRACTION",
+		"desc": "Breach quarantine zone. Retrieve encrypted flight recorder from military lockbox and extract before runner swarms corner the corridor.",
+		"type": "TYPE: ASSET RECOVERY",
+		"threat": "THREAT: LOW [SHAMBLERS]",
+		"payout_sc": 350,
+		"payout_rc": 1,
+		"xp": 120,
+		"kills_required": 25,
+		"is_night": false,
+	},
+	2: {
+		"title": "SECTOR 02: COMMERCIAL TRANSIT RESCUE",
+		"desc": "Locate barricaded survivor medic in transit terminal. Escort VIP to helipad across high-density runner corridors.",
+		"type": "TYPE: VIP ESCORT",
+		"threat": "THREAT: MEDIUM [RUNNERS]",
+		"payout_sc": 600,
+		"payout_rc": 2,
+		"xp": 260,
+		"kills_required": 35,
+		"is_night": false,
+	},
+	3: {
+		"title": "SECTOR 03: BLACKOUT SILO PURGE",
+		"desc": "Night Operations mandatory. Restore power to emergency generators using gun torch, purge Crimson Boss, extract via flare.",
+		"type": "TYPE: NIGHT PURGE",
+		"threat": "THREAT: SEVERE [NIGHT OPS]",
+		"payout_sc": 950,
+		"payout_rc": 3,
+		"xp": 450,
+		"kills_required": 45,
+		"is_night": true,
+	},
+	4: {
+		"title": "SECTOR 04: CRIMSON BIO-COMPLEX",
+		"desc": "Infiltrate deep containment lab. Plant centrifuge extractors on biomass nodes, defend against 3-wave containment breach, harvest cores.",
+		"type": "TYPE: BIO-LAB HARVEST",
+		"threat": "THREAT: CRITICAL [BOSS BREACH]",
+		"payout_sc": 1500,
+		"payout_rc": 6,
+		"xp": 700,
+		"kills_required": 60,
+		"is_night": false,
+	},
+}
+
+## Per-kill bounty (SC, unbanked until extraction) and XP.
+const KILL_REWARDS: Dictionary = {
+	"shambler": {"sc": 1, "xp": 2},
+	"runner": {"sc": 5, "xp": 4},
+	"tank": {"sc": 25, "xp": 15},
+	"crimson_boss": {"sc": 100, "xp": 50},
+}
+
+## Clearance level each Sector unlocks at (index = sector id).
+const SECTOR_UNLOCK_LEVELS: Array[int] = [0, 1, 11, 26, 41]
+
+const COMMS_PAYOUT_BONUS_PER_TIER := 0.15  # +15% contract SC per Comms Array tier
+const MEDBAY_HEALTH_PER_TIER := 20.0       # +20 starting armor/HP per Medbay tier
+const FIRST_CLEAR_MULTIPLIER := 2          # First successful extraction per sector pays double
+const FAILURE_LOOT_KEPT := 0.3             # KIA keeps 30% of unbanked SC
+const FAILURE_XP_KEPT := 0.5               # KIA keeps 50% of combat XP
 
 const XP_PER_LEVEL: Array[int] = [
 	0,    # Level 0 → 1 (Escape sequence / tutorial completion)
@@ -62,6 +133,8 @@ var clearance_level: int = 1:
 var clearance_xp: int = 0
 var has_completed_tutorial: bool = false
 var highest_sector_unlocked: int = 1
+## Sectors with at least one successful extraction: { "1": true }
+var sectors_cleared: Dictionary = {}
 
 ## Skills
 var unlocked_skills: Dictionary = {}
@@ -90,11 +163,16 @@ var current_sector: int = 1
 var current_contract: Dictionary = {}
 var in_run_sc: int = 0
 var in_run_rc: int = 0
+var in_run_xp: int = 0
 var in_run_kills: Dictionary = {
 	"shambler": 0,
 	"runner": 0,
+	"tank": 0,
 	"crimson_boss": 0
 }
+## True between start_mission_run() and complete/fail/abandon. Guards against double payouts.
+var run_active: bool = false
+var last_mission_summary: Dictionary = {}
 
 # ─── Lifecycle ─────────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -104,6 +182,13 @@ func _ready() -> void:
 	print("[GameManager] Ready — Clearance Lv.%d | Vault SC: %d | Vault RC: %d" % [
 		clearance_level, survival_coins, research_cores
 	])
+
+
+func _notification(what: int) -> void:
+	# Persist progress when Android backgrounds the app or the window closes.
+	# Unbanked run loot is intentionally NOT saved: it only counts once extracted.
+	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_game()
 
 
 func _init_default_upgrades() -> void:
@@ -142,33 +227,55 @@ func spend_research_cores(amount: int) -> bool:
 
 
 # ─── In-Run Loot & Combat Tracking ─────────────────────────────────────────────
+func get_contract(sector_id: int) -> Dictionary:
+	return CONTRACTS.get(sector_id, CONTRACTS[1])
+
+
+## Contract SC payout after the Comms Array bonus (what the board should advertise).
+func get_contract_payout_sc(sector_id: int) -> int:
+	var base: int = get_contract(sector_id)["payout_sc"]
+	var mult := 1.0 + COMMS_PAYOUT_BONUS_PER_TIER * float(get_outpost_level("comms_array"))
+	return int(round(float(base) * mult))
+
+
+func is_sector_cleared(sector_id: int) -> bool:
+	return sectors_cleared.get(str(sector_id), false)
+
+
+func get_medbay_health_bonus() -> float:
+	return MEDBAY_HEALTH_PER_TIER * float(get_outpost_level("medbay"))
+
+
 func start_mission_run() -> void:
 	in_run_sc = 0
 	in_run_rc = 0
-	in_run_kills["shambler"] = 0
-	in_run_kills["runner"] = 0
-	in_run_kills["crimson_boss"] = 0
+	in_run_xp = 0
+	for k in in_run_kills.keys():
+		in_run_kills[k] = 0
+	run_active = true
+	last_mission_summary = {}
 	in_run_loot_changed.emit(in_run_sc, in_run_rc)
+	in_run_kills_changed.emit(0)
+
+
+func get_run_kill_count() -> int:
+	var total := 0
+	for k in in_run_kills:
+		total += int(in_run_kills[k])
+	return total
 
 
 func record_kill(enemy_type: String) -> void:
 	total_kills += 1
-	var bounty := 0
-	match enemy_type:
-		"shambler":
-			bounty = 1
-		"runner":
-			bounty = 5
-		"crimson_boss":
-			bounty = 100
-	
-	if in_run_kills.has(enemy_type):
-		in_run_kills[enemy_type] += 1
-	else:
-		in_run_kills[enemy_type] = 1
-	
-	in_run_sc += bounty
+	if not run_active:
+		return  # e.g. a burning zombie dying after extraction already paid out
+	var reward: Dictionary = KILL_REWARDS.get(enemy_type, KILL_REWARDS["shambler"])
+
+	in_run_kills[enemy_type] = int(in_run_kills.get(enemy_type, 0)) + 1
+	in_run_sc += int(reward["sc"])
+	in_run_xp += int(reward["xp"])
 	in_run_loot_changed.emit(in_run_sc, in_run_rc)
+	in_run_kills_changed.emit(get_run_kill_count())
 
 
 func add_in_run_research_core(amount: int = 1) -> void:
@@ -197,13 +304,97 @@ func apply_mission_rewards(contract_payout_sc: int, contract_payout_rc: int, kil
 ## The player keeps 30% of what they scavenged in that run.
 ## CRITICAL: Existing vault balance is NEVER penalized!
 func apply_mission_failure_penalty(unbanked_sc: int) -> int:
-	var kept_loot := int(unbanked_sc * 0.3)
+	var kept_loot := int(float(unbanked_sc) * FAILURE_LOOT_KEPT)
 	add_coins(kept_loot)
 	
 	in_run_sc = 0
 	in_run_rc = 0
 	save_game()
 	return kept_loot
+
+
+## Player reached the LZ with the contract objective met. Banks everything and
+## returns a summary for the debrief screen. Safe to call twice (second call is a no-op).
+func complete_mission() -> Dictionary:
+	if not run_active:
+		return {}
+	run_active = false
+
+	var sector := current_sector
+	var contract := get_contract(sector)
+	var first_clear := not is_sector_cleared(sector)
+	var mult := FIRST_CLEAR_MULTIPLIER if first_clear else 1
+	var contract_sc := get_contract_payout_sc(sector) * mult
+	var contract_rc: int = contract["payout_rc"]
+	var contract_xp: int = int(contract["xp"]) * mult
+
+	var summary := _base_summary(true)
+	summary["contract_sc"] = contract_sc
+	summary["kill_sc"] = in_run_sc
+	summary["total_sc"] = contract_sc + in_run_sc
+	summary["total_rc"] = contract_rc + in_run_rc
+	summary["contract_xp"] = contract_xp
+	summary["kill_xp"] = in_run_xp
+	summary["total_xp"] = contract_xp + in_run_xp
+	summary["first_clear"] = first_clear
+
+	var level_before := clearance_level
+	var sector_before := highest_sector_unlocked
+	sectors_cleared[str(sector)] = true
+	apply_mission_rewards(contract_sc, contract_rc, in_run_sc, contract_xp + in_run_xp)
+
+	_finish_summary(summary, level_before, sector_before)
+	return summary
+
+
+## Player was killed. Keeps a share of unbanked SC and combat XP; contract reward and RC are lost.
+func fail_mission() -> Dictionary:
+	if not run_active:
+		return {}
+	run_active = false
+
+	var kept_xp := int(float(in_run_xp) * FAILURE_XP_KEPT)
+	var summary := _base_summary(false)
+	summary["lost_sc"] = in_run_sc
+	summary["total_rc"] = 0
+	summary["total_xp"] = kept_xp
+
+	var level_before := clearance_level
+	var sector_before := highest_sector_unlocked
+	add_xp(kept_xp)
+	summary["total_sc"] = apply_mission_failure_penalty(in_run_sc)
+
+	_finish_summary(summary, level_before, sector_before)
+	return summary
+
+
+## Quit or restart mid-run: nothing is banked, nothing is penalised.
+func abandon_mission() -> void:
+	run_active = false
+	in_run_sc = 0
+	in_run_rc = 0
+	in_run_xp = 0
+	save_game()  # Lifetime kill stats
+
+
+func _base_summary(success: bool) -> Dictionary:
+	return {
+		"success": success,
+		"sector": current_sector,
+		"title": get_contract(current_sector)["title"],
+		"kills": in_run_kills.duplicate(),
+		"kill_count": get_run_kill_count(),
+	}
+
+
+func _finish_summary(summary: Dictionary, level_before: int, sector_before: int) -> void:
+	summary["level_before"] = level_before
+	summary["level_after"] = clearance_level
+	summary["sector_unlocked"] = highest_sector_unlocked if highest_sector_unlocked > sector_before else 0
+	summary["xp_now"] = clearance_xp
+	summary["xp_needed"] = get_xp_for_next_level()
+	last_mission_summary = summary
+	mission_resolved.emit(summary)
 
 
 # ─── Progression ───────────────────────────────────────────────────────────────
@@ -232,14 +423,16 @@ func _check_level_up() -> void:
 
 
 func _update_sector_unlock() -> void:
-	if clearance_level >= 41:
-		highest_sector_unlocked = 4
-	elif clearance_level >= 26:
-		highest_sector_unlocked = 3
-	elif clearance_level >= 11:
-		highest_sector_unlocked = 2
-	else:
-		highest_sector_unlocked = 1
+	# Never re-lock a sector the player already had access to.
+	highest_sector_unlocked = maxi(highest_sector_unlocked, get_sector_for_level(clearance_level))
+
+
+func get_sector_for_level(level: int) -> int:
+	var sector := 1
+	for s in range(1, SECTOR_UNLOCK_LEVELS.size()):
+		if level >= SECTOR_UNLOCK_LEVELS[s]:
+			sector = s
+	return sector
 
 
 # ─── Skills ────────────────────────────────────────────────────────────────────
@@ -345,10 +538,13 @@ func save_settings_only() -> void:
 
 
 # ─── Save / Load System ────────────────────────────────────────────────────────
+## Crash-safe save: write to a temp file, keep the previous good save as a backup,
+## then swap the temp file into place. A half-written file can never replace a good one.
 func save_game() -> void:
 	sync_settings_from_managers()
 	
 	var config := ConfigFile.new()
+	config.set_value("meta", "version", SAVE_VERSION)
 
 	# Economy
 	config.set_value("economy", "survival_coins", survival_coins)
@@ -359,6 +555,7 @@ func save_game() -> void:
 	config.set_value("progression", "clearance_xp", clearance_xp)
 	config.set_value("progression", "has_completed_tutorial", has_completed_tutorial)
 	config.set_value("progression", "highest_sector_unlocked", highest_sector_unlocked)
+	config.set_value("progression", "sectors_cleared", sectors_cleared)
 
 	# Skills
 	config.set_value("skills", "unlocked_skills", unlocked_skills)
@@ -383,69 +580,142 @@ func save_game() -> void:
 	config.set_value("stats", "total_missions_completed", total_missions_completed)
 	config.set_value("stats", "total_extractions", total_extractions)
 
-	var err := config.save_encrypted_pass(SAVE_PATH, SAVE_KEY)
-	if err == OK:
-		game_saved.emit()
-	else:
-		push_warning("[GameManager] Failed to save game: %s" % error_string(err))
-
-
-func load_game() -> void:
-	if not FileAccess.file_exists(SAVE_PATH):
-		return
-
-	var config := ConfigFile.new()
-	var err := config.load_encrypted_pass(SAVE_PATH, SAVE_KEY)
+	var err := config.save_encrypted_pass(SAVE_TMP_PATH, SAVE_KEY)
 	if err != OK:
-		push_warning("[GameManager] Failed to load save: %s" % error_string(err))
+		push_warning("[GameManager] Failed to save game: %s" % error_string(err))
+		return
+	
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.copy_absolute(SAVE_PATH, SAVE_BACKUP_PATH)
+		DirAccess.remove_absolute(SAVE_PATH)
+	err = DirAccess.rename_absolute(SAVE_TMP_PATH, SAVE_PATH)
+	if err != OK:
+		push_warning("[GameManager] Failed to finalize save: %s" % error_string(err))
+		return
+	game_saved.emit()
+
+
+## Loads the main save, falling back to the temp file (interrupted swap) and then the backup.
+func load_game() -> void:
+	var config: ConfigFile = null
+	for path in [SAVE_PATH, SAVE_TMP_PATH, SAVE_BACKUP_PATH]:
+		config = _try_load_config(path)
+		if config:
+			if path != SAVE_PATH:
+				push_warning("[GameManager] Main save unreadable, recovered from %s" % path)
+			break
+	if not config:
 		return
 
 	# Economy
-	survival_coins = config.get_value("economy", "survival_coins", 0)
-	research_cores = config.get_value("economy", "research_cores", 0)
+	survival_coins = _read_int(config, "economy", "survival_coins", 0, 0, 999999999)
+	research_cores = _read_int(config, "economy", "research_cores", 0, 0, 999999999)
 
 	# Progression
-	clearance_level = config.get_value("progression", "clearance_level", 1)
-	clearance_xp = config.get_value("progression", "clearance_xp", 0)
-	has_completed_tutorial = config.get_value("progression", "has_completed_tutorial", false)
-	highest_sector_unlocked = config.get_value("progression", "highest_sector_unlocked", 1)
+	clearance_level = _read_int(config, "progression", "clearance_level", 1, 1, MAX_CLEARANCE_LEVEL)
+	clearance_xp = _read_int(config, "progression", "clearance_xp", 0, 0, 999999999)
+	has_completed_tutorial = _read_bool(config, "progression", "has_completed_tutorial", false)
+	highest_sector_unlocked = _read_int(config, "progression", "highest_sector_unlocked", 1, 1, SECTOR_UNLOCK_LEVELS.size() - 1)
+	_update_sector_unlock()
+	sectors_cleared = {}
+	var cleared = config.get_value("progression", "sectors_cleared", {})
+	if cleared is Dictionary:
+		for k in cleared:
+			if cleared[k] == true:
+				sectors_cleared[str(k)] = true
 
 	# Skills
-	unlocked_skills = config.get_value("skills", "unlocked_skills", {})
-	equipped_skills[0] = config.get_value("skills", "equipped_skills_0", "")
-	equipped_skills[1] = config.get_value("skills", "equipped_skills_1", "")
+	unlocked_skills = {}
+	var skills = config.get_value("skills", "unlocked_skills", {})
+	if skills is Dictionary:
+		for k in skills:
+			if skills[k] == true:
+				unlocked_skills[str(k)] = true
+	for slot in range(2):
+		var id := _read_string(config, "skills", "equipped_skills_%d" % slot, "")
+		equipped_skills[slot] = id if is_skill_unlocked(id) else ""
 
-	# Weapon upgrades
-	weapon_upgrades = config.get_value("weapons", "upgrades", {})
-	_init_default_upgrades()
+	# Weapon upgrades (clamped so a corrupt value can't exceed the max tier)
+	weapon_upgrades = {}
+	var upgrades = config.get_value("weapons", "upgrades", {})
+	if upgrades is Dictionary:
+		for weapon_id in WEAPON_IDS:
+			weapon_upgrades[weapon_id] = {}
+			var tracks = upgrades.get(weapon_id, {})
+			for track in UPGRADE_TRACKS:
+				var lv = tracks.get(track, 0) if tracks is Dictionary else 0
+				weapon_upgrades[weapon_id][track] = clampi(int(lv), 0, MAX_WEAPON_UPGRADE_LEVEL) if (lv is int or lv is float) else 0
 
 	# Outpost
-	outpost_levels = config.get_value("outpost", "levels", {})
+	outpost_levels = {}
+	var levels = config.get_value("outpost", "levels", {})
+	if levels is Dictionary:
+		for facility in OUTPOST_FACILITIES:
+			var lv = levels.get(facility, 0)
+			outpost_levels[facility] = clampi(int(lv), 0, MAX_OUTPOST_UPGRADE_LEVEL) if (lv is int or lv is float) else 0
+	_init_default_upgrades()
 
 	# Settings
-	saved_master_volume = config.get_value("settings", "master_volume", 1.0)
-	saved_sfx_volume = config.get_value("settings", "sfx_volume", 1.0)
-	saved_music_volume = config.get_value("settings", "music_volume", 0.7)
-	saved_haptics_enabled = config.get_value("settings", "haptics_enabled", true)
-	saved_is_portrait = config.get_value("settings", "is_portrait", true)
+	saved_master_volume = _read_float(config, "settings", "master_volume", 1.0)
+	saved_sfx_volume = _read_float(config, "settings", "sfx_volume", 1.0)
+	saved_music_volume = _read_float(config, "settings", "music_volume", 0.7)
+	saved_haptics_enabled = _read_bool(config, "settings", "haptics_enabled", true)
+	saved_is_portrait = _read_bool(config, "settings", "is_portrait", true)
 
 	# Stats
-	total_kills = config.get_value("stats", "total_kills", 0)
-	total_missions_completed = config.get_value("stats", "total_missions_completed", 0)
-	total_extractions = config.get_value("stats", "total_extractions", 0)
+	total_kills = _read_int(config, "stats", "total_kills", 0, 0, 999999999)
+	total_missions_completed = _read_int(config, "stats", "total_missions_completed", 0, 0, 999999999)
+	total_extractions = _read_int(config, "stats", "total_extractions", 0, 0, 999999999)
 
 	game_loaded.emit()
 
 
+func _try_load_config(path: String) -> ConfigFile:
+	if not FileAccess.file_exists(path):
+		return null
+	var config := ConfigFile.new()
+	var err := config.load_encrypted_pass(path, SAVE_KEY)
+	if err != OK:
+		push_warning("[GameManager] Failed to load %s: %s" % [path, error_string(err)])
+		return null
+	return config
+
+
+func _read_int(config: ConfigFile, section: String, key: String, default: int, min_v: int, max_v: int) -> int:
+	var v = config.get_value(section, key, default)
+	if v is int or v is float:
+		return clampi(int(v), min_v, max_v)
+	return default
+
+
+func _read_float(config: ConfigFile, section: String, key: String, default: float) -> float:
+	var v = config.get_value(section, key, default)
+	if v is int or v is float:
+		return clampf(float(v), 0.0, 1.0)
+	return default
+
+
+func _read_bool(config: ConfigFile, section: String, key: String, default: bool) -> bool:
+	var v = config.get_value(section, key, default)
+	return v if v is bool else default
+
+
+func _read_string(config: ConfigFile, section: String, key: String, default: String) -> String:
+	var v = config.get_value(section, key, default)
+	return v if v is String else default
+
+
 func reset_save() -> void:
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(SAVE_PATH)
+	for path in [SAVE_PATH, SAVE_TMP_PATH, SAVE_BACKUP_PATH]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(path)
 	survival_coins = 0
 	research_cores = 0
 	clearance_level = 1
 	clearance_xp = 0
 	has_completed_tutorial = false
 	highest_sector_unlocked = 1
+	sectors_cleared.clear()
 	unlocked_skills.clear()
 	equipped_skills = ["", ""]
 	weapon_upgrades.clear()
@@ -453,5 +723,6 @@ func reset_save() -> void:
 	total_kills = 0
 	total_missions_completed = 0
 	total_extractions = 0
+	run_active = false
 	_init_default_upgrades()
 	save_game()

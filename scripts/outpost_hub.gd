@@ -267,36 +267,18 @@ func select_sector(sector_id: int) -> void:
 	
 	selected_sector = sector_id
 	
-	# Update contract dossier details according to Sector (Section 4.1 & 4.2)
-	match sector_id:
-		1:
-			contract_title.text = "SECTOR 01: RESIDENTIAL EXTRACTION"
-			contract_desc.text = "Breach quarantine zone. Retrieve encrypted flight recorder from military lockbox and extract before runner swarms corner the corridor."
-			contract_type_badge.text = "TYPE: ASSET RECOVERY"
-			contract_threat_label.text = "THREAT: LOW [SHAMBLERS]"
-			contract_reward_sc.text = "+350 SC"
-			contract_reward_rc.text = "+1 RC"
-		2:
-			contract_title.text = "SECTOR 02: COMMERCIAL TRANSIT RESCUE"
-			contract_desc.text = "Locate barricaded survivor medic in transit terminal. Escort VIP to helipad across high-density runner corridors."
-			contract_type_badge.text = "TYPE: VIP ESCORT"
-			contract_threat_label.text = "THREAT: MEDIUM [RUNNERS]"
-			contract_reward_sc.text = "+600 SC"
-			contract_reward_rc.text = "+2 RC"
-		3:
-			contract_title.text = "SECTOR 03: BLACKOUT SILO PURGE"
-			contract_desc.text = "Night Operations mandatory. Restore power to emergency generators using gun torch, purge Crimson Boss, extract via flare."
-			contract_type_badge.text = "TYPE: NIGHT PURGE"
-			contract_threat_label.text = "THREAT: SEVERE [NIGHT OPS]"
-			contract_reward_sc.text = "+950 SC"
-			contract_reward_rc.text = "+3 RC"
-		4:
-			contract_title.text = "SECTOR 04: CRIMSON BIO-COMPLEX"
-			contract_desc.text = "Infiltrate deep containment lab. Plant centrifuge extractors on biomass nodes, defend against 3-wave containment breach, harvest cores."
-			contract_type_badge.text = "TYPE: BIO-LAB HARVEST"
-			contract_threat_label.text = "THREAT: CRITICAL [BOSS BREACH]"
-			contract_reward_sc.text = "+1500 SC"
-			contract_reward_rc.text = "+6 RC"
+	# Contract dossier comes from GameManager so advertised reward == actual payout
+	if gm:
+		var c: Dictionary = gm.get_contract(sector_id)
+		contract_title.text = c["title"]
+		contract_desc.text = "%s\n\nOBJECTIVE: Eliminate %d hostiles, then reach the extraction LZ." % [c["desc"], c["kills_required"]]
+		contract_type_badge.text = c["type"]
+		contract_threat_label.text = c["threat"]
+		var sc_text := "+%d SC" % gm.get_contract_payout_sc(sector_id)
+		if not gm.is_sector_cleared(sector_id):
+			sc_text += " (FIRST CLEAR x2)"
+		contract_reward_sc.text = sc_text
+		contract_reward_rc.text = "+%d RC" % c["payout_rc"]
 
 	_refresh_sector_locks()
 
@@ -326,13 +308,8 @@ func _on_deploy_pressed() -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	if gm:
 		gm.current_sector = selected_sector
-		gm.current_contract = {
-			"sector": selected_sector,
-			"title": contract_title.text if contract_title else "CONTRACT",
-			"type": contract_type_badge.text if contract_type_badge else "ASSET RECOVERY",
-			"threat": contract_threat_label.text if contract_threat_label else "LOW",
-			"is_night": (selected_sector == 3)
-		}
+		gm.current_contract = gm.get_contract(selected_sector).duplicate()
+		gm.current_contract["sector"] = selected_sector
 	
 	var dnm = get_node_or_null("/root/DayNightManager")
 	if dnm:
@@ -610,6 +587,7 @@ func _on_upgrade_outpost_facility(facility: String) -> void:
 
 func _on_outpost_upgraded(_fac: String, _lv: int) -> void:
 	_refresh_base_upgrades()
+	select_sector(selected_sector)
 
 
 # ─── Responsive Layout (Portrait vs Landscape) ────────────────────────────────

@@ -412,6 +412,108 @@ func _on_vault_state_changed(can_vault: bool) -> void:
 		else:
 			climb_button.modulate = Color(1, 1, 1, 0.45)
 
+func show_banner(title: String, sub: String = "") -> void:
+	if not street_cleared_banner:
+		return
+	var title_label := street_cleared_banner.get_node_or_null("Title") as Label
+	var sub_label := street_cleared_banner.get_node_or_null("Sub") as Label
+	if title_label:
+		title_label.text = title
+	if sub_label:
+		sub_label.text = sub
+	show_street_cleared_banner()
+
+## End-of-run debrief (extraction or KIA). Pauses the game; HUD runs with process_mode ALWAYS.
+func show_mission_result(summary: Dictionary) -> void:
+	get_tree().paused = true
+	controls_root.visible = false
+	pause_button.visible = false
+	pause_modal.visible = false
+	
+	var success: bool = summary.get("success", false)
+	var accent := Color(0.35, 1.0, 0.55) if success else Color(1.0, 0.2, 0.25)
+	
+	var overlay := ColorRect.new()
+	overlay.name = "MissionResult"
+	overlay.color = Color(0.0, 0.0, 0.0, 0.82)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(overlay)
+	
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+	
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(820, 0)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.067, 0.067, 0.075, 0.97)
+	style.border_color = accent
+	style.set_border_width_all(4)
+	style.set_content_margin_all(48)
+	card.add_theme_stylebox_override("panel", style)
+	center.add_child(card)
+	
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 18)
+	card.add_child(vbox)
+	
+	_add_result_label(vbox, "EXTRACTION SUCCESSFUL" if success else "OPERATIVE KIA", 60, accent)
+	_add_result_label(vbox, summary.get("title", ""), 26, Color(0.65, 0.65, 0.68))
+	
+	if summary.is_empty():
+		_add_result_label(vbox, "No contract data.", 30, Color.WHITE)
+	else:
+		var kills: Dictionary = summary.get("kills", {})
+		_add_result_label(vbox, "KILLS: %d   (SHAMBLER %d · RUNNER %d · TANK %d)" % [
+			summary.get("kill_count", 0), kills.get("shambler", 0), kills.get("runner", 0), kills.get("tank", 0)
+		], 30, Color.WHITE)
+		if success:
+			var contract_line := "CONTRACT PAYOUT: +%d SC" % summary.get("contract_sc", 0)
+			if summary.get("first_clear", false):
+				contract_line += "   [FIRST CLEAR x2]"
+			_add_result_label(vbox, contract_line, 30, Color.WHITE)
+			_add_result_label(vbox, "KILL BOUNTY: +%d SC" % summary.get("kill_sc", 0), 30, Color.WHITE)
+			_add_result_label(vbox, "BANKED: +%d SC   +%d RC" % [summary.get("total_sc", 0), summary.get("total_rc", 0)], 38, Color(1.0, 0.72, 0.0))
+		else:
+			_add_result_label(vbox, "UNBANKED LOOT LOST: %d SC" % summary.get("lost_sc", 0), 30, Color(1.0, 0.45, 0.45))
+			_add_result_label(vbox, "SALVAGED (30%%): +%d SC" % summary.get("total_sc", 0), 38, Color(1.0, 0.72, 0.0))
+		
+		_add_result_label(vbox, "+%d XP   ·   CLR-LV.%02d  (%d / %d XP)" % [
+			summary.get("total_xp", 0), summary.get("level_after", 1), summary.get("xp_now", 0), summary.get("xp_needed", 0)
+		], 30, Color.WHITE)
+		if summary.get("level_after", 1) > summary.get("level_before", 1):
+			_add_result_label(vbox, "▲ CLEARANCE LEVEL UP!", 40, Color(1.0, 0.72, 0.0))
+		if summary.get("sector_unlocked", 0) > 0:
+			_add_result_label(vbox, "★ SECTOR %02d UNLOCKED" % summary["sector_unlocked"], 40, Color(1.0, 0.15, 0.2))
+	
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 16)
+	vbox.add_child(spacer)
+	
+	var redeploy_btn := Button.new()
+	redeploy_btn.text = "REDEPLOY" if success else "RETRY CONTRACT"
+	redeploy_btn.custom_minimum_size = Vector2(0, 110)
+	redeploy_btn.add_theme_font_size_override("font_size", 34)
+	redeploy_btn.pressed.connect(restart_game)
+	vbox.add_child(redeploy_btn)
+	
+	var hub_btn := Button.new()
+	hub_btn.text = "RETURN TO OUTPOST"
+	hub_btn.custom_minimum_size = Vector2(0, 110)
+	hub_btn.add_theme_font_size_override("font_size", 34)
+	hub_btn.pressed.connect(goto_main_menu)
+	vbox.add_child(hub_btn)
+
+func _add_result_label(parent: Control, text: String, font_size: int, col: Color) -> void:
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", col)
+	parent.add_child(label)
+
 func show_street_cleared_banner() -> void:
 	if not street_cleared_banner:
 		return
@@ -443,8 +545,14 @@ func resume_game() -> void:
 	settings_modal.visible = false
 
 func restart_game() -> void:
+	_abandon_active_run()
 	get_tree().paused = false
 	get_tree().reload_current_scene()
+
+func _abandon_active_run() -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if gm and gm.run_active:
+		gm.abandon_mission()
 
 func open_settings() -> void:
 	settings_modal.visible = true
@@ -453,6 +561,7 @@ func close_settings() -> void:
 	settings_modal.visible = false
 
 func goto_main_menu() -> void:
+	_abandon_active_run()
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/ui/outpost_hub.tscn")
 
