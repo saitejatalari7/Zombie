@@ -7,7 +7,6 @@
 [ext_resource type="Script" path="res://scripts/camera_follow.gd" id="5_camera_follow"]
 [ext_resource type="Script" path="res://scripts/zombie_spawner.gd" id="6_spawner"]
 [ext_resource type="PackedScene" uid="uid://df715hud" path="res://scenes/ui/mobile_hud.tscn" id="7_hud"]
-[ext_resource type="PackedScene" uid="uid://sunlight_ctrl_panel_01" path="res://scenes/ui/sunlight_control_panel.tscn" id="8_sunlight_panel"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -83,4 +82,3 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -42)
 
 [node name="MobileHUD" parent="." instance=ExtResource("7_hud")]
 
-[node name="SunlightControlPanel" parent="." instance=ExtResource("8_sunlight_panel")]

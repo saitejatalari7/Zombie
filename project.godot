@@ -8,11 +8,12 @@ config_version=5
 
 config/name="Red Chalk: Outbreak"
 config/icon="res://icon.png"
-run/main_scene="res://scenes/ui/outpost_hub.tscn"
+run/main_scene="res://scenes/ui/title_screen.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]
 
+UiTheme="*res://scripts/ui/ui_theme.gd"
 GameManager="*res://scripts/game_manager.gd"
 OrientationManager="*res://scripts/orientation_manager.gd"
 AudioManager="*res://scripts/audio_manager.gd"

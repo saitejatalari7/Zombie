@@ -52,10 +52,6 @@ func _ready() -> void:
 	spawner.setup_player(player)
 	_start_mission(sec_id)
 	
-	var sun_panel = get_node_or_null("SunlightControlPanel")
-	if sun_panel and sun_panel.has_method("setup"):
-		sun_panel.setup(sun, world_env)
-	
 	# Connect legacy WoodenBarricade if present in legacy whitebox map
 	var barricade := get_node_or_null("EnvironmentMap/WoodenBarricade") as WoodenBarricade
 	if barricade:
@@ -138,7 +134,6 @@ func _start_mission(_sector_id: int) -> void:
 	job.progress_changed.connect(_on_job_progress)
 	gm.in_run_kills_changed.connect(job.on_run_kills_changed)
 	player.died.connect(_on_player_died)
-	hud.show_radio("OVERWATCH", String(contract.get("briefing", "")))
 	job.start()
 	_spawn_intel(gm)
 
@@ -203,8 +198,8 @@ func _on_objective_met() -> void:
 	objective_complete = true
 	if job:
 		hud.show_radio("OVERWATCH", String(job.contract.get("extract_radio", "")))
-	hud.set_mission_status("EVAC UNLOCKED — REACH THE LZ ▲", Color(1.0, 0.8, 0.1))
-	hud.show_banner("⚡ OBJECTIVE COMPLETE — EVAC UNLOCKED", "Follow the red beacon to the extraction LZ ➔")
+	hud.set_mission_status("EVAC UNLOCKED — REACH THE LZ", Color(1.0, 0.8, 0.1))
+	hud.show_banner("OBJECTIVE COMPLETE — EVAC UNLOCKED", "Follow the red beacon to the extraction LZ")
 	if is_instance_valid(extraction_marker):
 		extraction_marker.visible = true
 	# Already standing in the LZ when the objective completes
@@ -232,7 +227,7 @@ func _start_evac() -> void:
 	evac_hold_time = gm.get_evac_hold_time() if gm else 20.0
 	evac_time_left = evac_hold_time
 	spawner.evac_frenzy = true
-	hud.show_banner("⚠ EVAC INBOUND — HOLD THE LZ", "Stay inside the beacon until the chopper lands")
+	hud.show_banner("EVAC INBOUND — HOLD THE LZ", "Stay inside the beacon until the chopper lands")
 
 func _process(delta: float) -> void:
 	_update_objective_pointer()

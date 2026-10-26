@@ -1,10 +1,12 @@
 extends CanvasLayer
 class_name MobileHUD
 ## MobileHUD.gd
-## Tactical Extraction HUD for PROTOCOL: CRIMSON.
-## Fully responsive between Portrait (1080x1920) and Landscape (1920x1080).
-## Features Auto-Fire toggle, Mission Tracker Pill, Twin-Stick Drag Aim,
-## and dynamic ability placement (Vertical Stack vs. Radial Arc).
+## In-game HUD for PROTOCOL: CRIMSON (portrait-first, built on the UiTheme/UIKit
+## design system). Top-left: health and run stats. Top-right: pause. Under them:
+## the mission line and Overwatch radio. Bottom: joystick (left), fire button
+## (right: tap toggles auto-fire, hold/drag aims) with molotov, blast and the
+## context button (climb / shoulder charge / jump) around it. Debug readouts only
+## appear in debug builds.
 
 @onready var top_bar: Control = $TopBar
 @onready var health_bar: ProgressBar = $TopBar/HealthBar
@@ -54,17 +56,34 @@ var key_molotov_aiming: bool = false
 var key_blast_aiming: bool = false
 var _fps_timer: float = 0.0
 
+# Release UI (built in _apply_release_ui)
+const FIRE_TAP_MS := 220
+var _stats_label: Label = null
+var _pause_btn: Button = null
+var _fire_skin: RoundButtonSkin = null
+var _molotov_skin: RoundButtonSkin = null
+var _blast_skin: RoundButtonSkin = null
+var _climb_skin: RoundButtonSkin = null
+var _fire_down_ms: int = 0
+var _fire_dragged: bool = false
+var _hp: float = 100.0
+var _kills: int = 0
+var _run_sc: int = 0
+var _pause_layer: Control = null
+var _abandon_armed: bool = false
+var _abandon_btn: Button = null
+
 func _process(delta: float) -> void:
 	# Continuous mouse raycast targeting while special aiming on PC
 	if (key_molotov_aiming or key_blast_aiming or (is_molotov_aiming and not DisplayServer.is_touchscreen_available()) or (is_super_blast_aiming and not DisplayServer.is_touchscreen_available())) and player:
 		_update_mouse_aim()
 		
 	_fps_timer += delta
-	if _fps_timer >= 0.22 and is_instance_valid(fps_label):
+	if _fps_timer >= 0.22 and is_instance_valid(fps_label) and fps_label.visible:
 		_fps_timer = 0.0
 		var fps := Engine.get_frames_per_second()
 		var ms := 1000.0 / maxf(1.0, float(fps))
-		fps_label.text = "⚡ %d FPS  (%.1f ms)" % [fps, ms]
+		fps_label.text = "%d FPS  (%.1f ms)" % [fps, ms]
 		if fps_label.label_settings:
 			if fps >= 55:
 				fps_label.label_settings.font_color = Color(0.35, 1.0, 0.65, 0.95)
@@ -111,6 +130,7 @@ func _ready() -> void:
 		_apply_responsive_layout(om.is_portrait)
 	else:
 		_apply_responsive_layout(true)
+	_apply_release_ui()
 
 func _on_orientation_changed(is_portrait: bool) -> void:
 	_apply_responsive_layout(is_portrait)
@@ -121,45 +141,40 @@ func _apply_responsive_layout(is_portrait: bool) -> void:
 		
 	if is_portrait:
 		# ─── PORTRAIT (1080 x 1920) ──────────────────────────────────────────
-		# Joystick
-		joystick.offset_left = 60.0
-		joystick.offset_top = -420.0
-		joystick.offset_right = 420.0
-		joystick.offset_bottom = -60.0
+		# Joystick: 330 px, bottom-left
+		joystick.offset_left = 70.0
+		joystick.offset_top = -470.0
+		joystick.offset_right = 400.0
+		joystick.offset_bottom = -140.0
 		
-		# Fire Button
-		fire_button.offset_left = -310.0
-		fire_button.offset_top = -340.0
+		# Fire: 280 px round, bottom-right (tap = auto-fire on/off, hold/drag = aim)
+		fire_button.offset_left = -350.0
+		fire_button.offset_top = -420.0
 		fire_button.offset_right = -70.0
-		fire_button.offset_bottom = -100.0
+		fire_button.offset_bottom = -140.0
 		
-		# Auto-Fire Toggle Button (above fire button)
-		if auto_fire_btn:
-			auto_fire_btn.offset_left = -310.0
-			auto_fire_btn.offset_top = -415.0
-			auto_fire_btn.offset_right = -70.0
-			auto_fire_btn.offset_bottom = -355.0
+		# Abilities in an arc around the fire button
+		molotov_button.offset_left = -560.0
+		molotov_button.offset_top = -330.0
+		molotov_button.offset_right = -380.0
+		molotov_button.offset_bottom = -150.0
 		
-		# Vertical Stack Ability Buttons
-		super_blast_button.offset_left = -275.0
-		super_blast_button.offset_top = -600.0
-		super_blast_button.offset_right = -105.0
-		super_blast_button.offset_bottom = -430.0
+		super_blast_button.offset_left = -270.0
+		super_blast_button.offset_top = -630.0
+		super_blast_button.offset_right = -90.0
+		super_blast_button.offset_bottom = -450.0
 		
-		molotov_button.offset_left = -475.0
-		molotov_button.offset_top = -540.0
-		molotov_button.offset_right = -315.0
-		molotov_button.offset_bottom = -380.0
-		
-		climb_button.offset_left = -465.0
-		climb_button.offset_top = -320.0
-		climb_button.offset_right = -305.0
-		climb_button.offset_bottom = -160.0
+		climb_button.offset_left = -480.0
+		climb_button.offset_top = -540.0
+		climb_button.offset_right = -330.0
+		climb_button.offset_bottom = -390.0
 		
 		if mission_pill:
-			mission_pill.offset_left = -280.0
-			mission_pill.offset_right = 280.0
-			mission_pill.offset_top = 100.0
+			mission_pill.set_anchors_preset(Control.PRESET_TOP_WIDE)
+			mission_pill.offset_left = UIKit.MARGIN
+			mission_pill.offset_right = -UIKit.MARGIN
+			mission_pill.offset_top = 260.0
+			mission_pill.offset_bottom = 340.0
 	else:
 		# ─── LANDSCAPE (1920 x 1080) ─────────────────────────────────────────
 		# Movement Joystick left-anchored
@@ -207,6 +222,9 @@ func _on_auto_fire_pressed() -> void:
 		_update_auto_fire_ui(state)
 
 func _update_auto_fire_ui(enabled: bool) -> void:
+	if _fire_skin:
+		_fire_skin.text = "AUTO" if enabled else "FIRE"
+		_fire_skin.fill = UIKit.CRIMSON if enabled else Color(UIKit.CRIMSON_DARK, 0.92)
 	if auto_fire_btn:
 		if enabled:
 			auto_fire_btn.text = "AUTO: ON"
@@ -218,11 +236,14 @@ func _update_auto_fire_ui(enabled: bool) -> void:
 func _on_fire_gui_input(event: InputEvent) -> void:
 	# Twin-Stick Manual Drag-Aim sweep on Fire Button (Design Doc 6.3)
 	if event is InputEventScreenDrag:
+		_fire_dragged = true
 		var center: Vector2 = fire_button.size * 0.5
 		var drag_offset: Vector2 = (event.position - center) / (fire_button.size.x * 0.5)
 		if player:
 			player.mobile_aim_input = drag_offset.limit_length(1.0)
 	elif event is InputEventMouseMotion and is_fire_dragging:
+		if (event as InputEventMouseMotion).relative.length() > 4.0:
+			_fire_dragged = true
 		var center: Vector2 = fire_button.size * 0.5
 		var drag_offset: Vector2 = (event.position - center) / (fire_button.size.x * 0.5)
 		if player:
@@ -404,17 +425,20 @@ func _on_molotov_ammo_changed(current: int, max_val: int) -> void:
 		molotov_ammo_badge.text = "%d/%d" % [current, max_val]
 	if molotov_button:
 		molotov_button.disabled = (current <= 0)
-		molotov_button.modulate.a = 0.45 if (current <= 0) else 1.0
+	if _molotov_skin:
+		_molotov_skin.text = "%d/%d" % [current, max_val]
+		_molotov_skin.icon_color = UIKit.AMBER if current > 0 else UIKit.MUTED
+		_molotov_skin.text_color = UIKit.AMBER if current > 0 else UIKit.MUTED
 
 func _on_vault_state_changed(can_vault: bool) -> void:
-	if climb_button:
-		if can_vault:
-			climb_button.modulate = Color(0.2, 1.0, 0.9, 1.0)
-			var tween := create_tween()
-			tween.tween_property(climb_button, "scale", Vector2(1.1, 1.1), 0.12)
-			tween.tween_property(climb_button, "scale", Vector2(1.0, 1.0), 0.12)
-		else:
-			climb_button.modulate = Color(1, 1, 1, 0.45)
+	if _climb_skin:
+		_climb_skin.text = "CLIMB" if can_vault else "CHARGE"
+		_climb_skin.ring = UIKit.CYAN if can_vault else Color(0, 0, 0, 0)
+		_climb_skin.ring_width = 6.0 if can_vault else 0.0
+	if climb_button and can_vault:
+		var tween := create_tween()
+		tween.tween_property(climb_button, "scale", Vector2(1.1, 1.1), 0.12)
+		tween.tween_property(climb_button, "scale", Vector2(1.0, 1.0), 0.12)
 
 var evac_bar: ProgressBar = null
 
@@ -444,7 +468,7 @@ func _next_radio_line() -> void:
 	_radio_busy = true
 	_ensure_radio_panel()
 	var line: Array = _radio_queue.pop_front()
-	_radio_speaker.text = "📻 " + String(line[0])
+	_radio_speaker.text = String(line[0])
 	_radio_text.text = String(line[1])
 	_radio_panel.visible = true
 	_radio_panel.modulate.a = 1.0
@@ -457,34 +481,28 @@ func _hide_radio_if_idle() -> void:
 func _ensure_radio_panel() -> void:
 	if _radio_panel:
 		return
-	_radio_panel = PanelContainer.new()
+	_radio_panel = UIKit.card("AccentCard")
 	_radio_panel.name = "RadioPanel"
 	_radio_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_radio_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_radio_panel.offset_left = -400.0
-	_radio_panel.offset_right = 400.0
-	_radio_panel.offset_top = 228.0
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.067, 0.067, 0.075, 0.88)
-	bg.border_color = Color(1.0, 0.72, 0.0, 0.9)
-	bg.border_width_left = 6
-	bg.set_content_margin_all(16)
-	_radio_panel.add_theme_stylebox_override("panel", bg)
-	var vbox := VBoxContainer.new()
-	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_radio_panel.add_child(vbox)
-	_radio_speaker = Label.new()
-	_radio_speaker.add_theme_font_size_override("font_size", 24)
-	_radio_speaker.add_theme_color_override("font_color", Color(1.0, 0.72, 0.0))
-	vbox.add_child(_radio_speaker)
-	_radio_text = Label.new()
-	_radio_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_radio_text.custom_minimum_size = Vector2(740.0, 0.0)
-	_radio_text.add_theme_font_size_override("font_size", 28)
-	_radio_text.add_theme_color_override("font_color", Color(0.95, 0.95, 0.97))
-	vbox.add_child(_radio_text)
+	_radio_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_radio_panel.offset_left = UIKit.MARGIN
+	_radio_panel.offset_right = -UIKit.MARGIN
+	_radio_panel.offset_top = 360.0
+	var row := UIKit.hbox(18)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(UIKit.icon("radio", 52, UIKit.AMBER))
+	var col := UIKit.vbox(4)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_radio_speaker = UIKit.label("", "CaptionLabel", UIKit.AMBER)
+	col.add_child(_radio_speaker)
+	_radio_text = UIKit.paragraph("", UIKit.TEXT, 34)
+	col.add_child(_radio_text)
+	row.add_child(col)
+	_radio_panel.add_child(row)
 	add_child(_radio_panel)
 	move_child(_radio_panel, 0)
+
 var objective_pointer: ObjectivePointer = null
 
 ## Points at the current goal (objective, then LZ). Pass null to hide.
@@ -542,146 +560,205 @@ func show_banner(title: String, sub: String = "") -> void:
 	show_street_cleared_banner()
 
 ## End-of-run debrief (extraction or KIA). Pauses the game; HUD runs with process_mode ALWAYS.
+## Rewards first, then XP and level-up, then the next goal, then the actions.
 func show_mission_result(summary: Dictionary) -> void:
 	get_tree().paused = true
 	controls_root.visible = false
-	pause_button.visible = false
-	pause_modal.visible = false
-	
+	if _pause_btn:
+		_pause_btn.visible = false
+	if objective_pointer:
+		objective_pointer.clear()
+	if _radio_panel:
+		_radio_panel.visible = false
+	hide_evac_progress()
+	var gm = get_node_or_null("/root/GameManager")
 	var success: bool = summary.get("success", false)
-	var accent := Color(0.35, 1.0, 0.55) if success else Color(1.0, 0.2, 0.25)
 	
-	var overlay := ColorRect.new()
-	overlay.name = "MissionResult"
-	overlay.color = Color(0.0, 0.0, 0.0, 0.82)
-	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(overlay)
+	var layer := Control.new()
+	layer.name = "MissionResult"
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(layer)
+	layer.add_child(UIKit.overlay(0.97))
+	var col := UIKit.vbox(26)
+	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	col.offset_left = UIKit.MARGIN
+	col.offset_right = -UIKit.MARGIN
+	col.offset_top = UIKit.TOP_SAFE + 70
+	col.offset_bottom = -130
+	layer.add_child(col)
 	
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.add_child(center)
-	
-	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(820, 0)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.067, 0.067, 0.075, 0.97)
-	style.border_color = accent
-	style.set_border_width_all(4)
-	style.set_content_margin_all(48)
-	card.add_theme_stylebox_override("panel", style)
-	center.add_child(card)
-	
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 18)
-	card.add_child(vbox)
-	
-	_add_result_label(vbox, "EXTRACTION SUCCESSFUL" if success else "OPERATIVE KIA", 60, accent)
-	_add_result_label(vbox, summary.get("title", ""), 26, Color(0.65, 0.65, 0.68))
+	var status := UIKit.hbox(12)
+	status.add_child(UIKit.icon("check" if success else "skull", 44, UIKit.GREEN if success else UIKit.CRIMSON))
+	status.add_child(UIKit.label("EXTRACTED" if success else "OPERATIVE DOWN", "CaptionLabel", UIKit.GREEN if success else UIKit.CRIMSON, 36))
+	col.add_child(status)
+	var title_text := String(summary.get("title", "MISSION"))
+	var parts := title_text.split(": ", false, 1)
+	var title := UIKit.label(parts[parts.size() - 1], "DisplayLabel")
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(title)
 	
 	if summary.is_empty():
-		_add_result_label(vbox, "No contract data.", 30, Color.WHITE)
+		col.add_child(UIKit.paragraph("No contract data."))
 	else:
+		var rewards := UIKit.card()
+		var rv := UIKit.vbox(18)
 		var kills: Dictionary = summary.get("kills", {})
-		_add_result_label(vbox, "KILLS: %d   (SHAMBLER %d · RUNNER %d · TANK %d)" % [
-			summary.get("kill_count", 0), kills.get("shambler", 0), kills.get("runner", 0), kills.get("tank", 0)
-		], 30, Color.WHITE)
 		if success:
-			var contract_line := "CONTRACT PAYOUT: +%d SC" % summary.get("contract_sc", 0)
+			var contract_text := "+%s SC" % UIKit.fmt_int(int(summary.get("contract_sc", 0)))
 			if summary.get("first_clear", false):
-				contract_line += "   [FIRST CLEAR x2]"
-			_add_result_label(vbox, contract_line, 30, Color.WHITE)
-			_add_result_label(vbox, "KILL BOUNTY: +%d SC" % summary.get("kill_sc", 0), 30, Color.WHITE)
-			_add_result_label(vbox, "BANKED: +%d SC   +%d RC" % [summary.get("total_sc", 0), summary.get("total_rc", 0)], 38, Color(1.0, 0.72, 0.0))
+				contract_text += "  (FIRST CLEAR ×2)"
+			rv.add_child(_result_row("Contract", contract_text, UIKit.TEXT))
+			rv.add_child(_result_row("Kills (%d)" % int(summary.get("kill_count", 0)), "+%s SC" % UIKit.fmt_int(int(summary.get("kill_sc", 0))), UIKit.TEXT))
 		else:
-			_add_result_label(vbox, "UNBANKED LOOT LOST: %d SC" % summary.get("lost_sc", 0), 30, Color(1.0, 0.45, 0.45))
-			_add_result_label(vbox, "SALVAGED (30%%): +%d SC" % summary.get("total_sc", 0), 38, Color(1.0, 0.72, 0.0))
-		
+			rv.add_child(_result_row("Kills (%d)" % int(summary.get("kill_count", 0)), "", UIKit.TEXT))
+			rv.add_child(_result_row("Unbanked loot lost", "-%s SC" % UIKit.fmt_int(int(summary.get("lost_sc", 0))), UIKit.CRIMSON))
 		var intel: Vector2i = summary.get("intel", Vector2i.ZERO)
 		if intel.y > 0:
-			_add_result_label(vbox, "INTEL FOUND IN THIS SECTOR: %d / %d" % [intel.x, intel.y], 26, Color(0.75, 0.75, 0.8))
-		_add_result_label(vbox, "+%d XP   ·   CLR-LV.%02d  (%d / %d XP)" % [
-			summary.get("total_xp", 0), summary.get("level_after", 1), summary.get("xp_now", 0), summary.get("xp_needed", 0)
-		], 30, Color.WHITE)
-		if summary.get("level_after", 1) > summary.get("level_before", 1):
-			_add_result_label(vbox, "▲ CLEARANCE LEVEL UP!", 40, Color(1.0, 0.72, 0.0))
-		if summary.get("sector_unlocked", 0) > 0:
-			_add_result_label(vbox, "★ SECTOR %02d UNLOCKED" % summary["sector_unlocked"], 40, Color(1.0, 0.15, 0.2))
-		_add_next_goal(vbox)
+			rv.add_child(_result_row("Intel found", "%d / %d" % [intel.x, intel.y], UIKit.TEXT))
+		var line := ColorRect.new()
+		line.color = UIKit.LINE
+		line.custom_minimum_size = Vector2(0, 2)
+		rv.add_child(line)
+		var totals := UIKit.hbox(16)
+		totals.add_child(UIKit.label("+%s SC" % UIKit.fmt_int(int(summary.get("total_sc", 0))), "HeadingLabel", UIKit.AMBER, 54))
+		totals.add_child(UIKit.expander())
+		totals.add_child(UIKit.label("+%d RC" % int(summary.get("total_rc", 0)), "HeadingLabel", UIKit.CRIMSON, 54))
+		rv.add_child(totals)
+		if not success:
+			rv.add_child(UIKit.label("You keep 30% of the loot you carried and half your combat XP.", "CaptionLabel"))
+		rewards.add_child(rv)
+		col.add_child(rewards)
+		
+		var xp_card := UIKit.card()
+		var xv := UIKit.vbox(14)
+		var xr := UIKit.hbox(12)
+		xr.add_child(UIKit.label("CLR-LV.%02d" % int(summary.get("level_after", 1)), "SubheadLabel"))
+		if int(summary.get("level_after", 1)) > int(summary.get("level_before", 1)):
+			xr.add_child(UIKit.label("LEVEL UP", "SubheadLabel", UIKit.AMBER))
+		xr.add_child(UIKit.expander())
+		xr.add_child(UIKit.label("+%d XP" % int(summary.get("total_xp", 0)), "SubheadLabel", UIKit.DIM, 40))
+		xv.add_child(xr)
+		var need := int(summary.get("xp_needed", 0))
+		xv.add_child(UIKit.bar(float(summary.get("xp_now", 0)) / float(maxi(need, 1)) if need > 0 else 1.0))
+		xp_card.add_child(xv)
+		col.add_child(xp_card)
+		
+		if int(summary.get("sector_unlocked", 0)) > 0:
+			var unlock := UIKit.card("SuccessCard")
+			unlock.add_child(UIKit.label("SECTOR %02d UNLOCKED" % int(summary["sector_unlocked"]), "SubheadLabel", UIKit.GREEN))
+			col.add_child(unlock)
 	
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 16)
-	vbox.add_child(spacer)
+	var goal: Dictionary = gm.get_next_armory_goal() if gm else {}
+	var upgrade_ready := false
+	if not goal.is_empty():
+		var cost := int(goal["cost"])
+		upgrade_ready = gm.survival_coins >= cost
+		var goal_card := UIKit.card("SuccessCard" if upgrade_ready else "")
+		var text: String
+		if upgrade_ready:
+			text = "UPGRADE READY  ·  %s LV.%d  ·  %s SC" % [goal["name"], int(goal["level"]), UIKit.fmt_int(cost)]
+		else:
+			text = "NEXT  ·  %s LV.%d  ·  %s SC more" % [goal["name"], int(goal["level"]), UIKit.fmt_int(cost - int(gm.survival_coins))]
+		goal_card.add_child(UIKit.paragraph(text, UIKit.GREEN if upgrade_ready else UIKit.TEXT_SOFT, 34))
+		col.add_child(goal_card)
 	
-	var redeploy_btn := Button.new()
-	redeploy_btn.text = "REDEPLOY" if success else "RETRY CONTRACT"
-	redeploy_btn.custom_minimum_size = Vector2(0, 110)
-	redeploy_btn.add_theme_font_size_override("font_size", 34)
-	redeploy_btn.pressed.connect(restart_game)
-	vbox.add_child(redeploy_btn)
-	
-	var hub_btn := Button.new()
-	hub_btn.text = "RETURN TO OUTPOST"
-	hub_btn.custom_minimum_size = Vector2(0, 110)
-	hub_btn.add_theme_font_size_override("font_size", 34)
+	col.add_child(UIKit.expander())
+	if upgrade_ready:
+		var up := UIKit.button("Upgrade now", "AmberButton")
+		up.pressed.connect(_goto_hub_tab.bind("armory"))
+		col.add_child(up)
+	var row := UIKit.hbox(20)
+	var hub_btn := UIKit.button("Outpost", "GhostButton")
+	hub_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hub_btn.pressed.connect(goto_main_menu)
-	vbox.add_child(hub_btn)
+	row.add_child(hub_btn)
+	var again := UIKit.button("Redeploy" if success else "Retry")
+	again.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	again.pressed.connect(restart_game)
+	row.add_child(again)
+	col.add_child(row)
 
-## One clear reason to play again: the next Armory upgrade, affordable now or how far off.
-func _add_next_goal(parent: Control) -> void:
+
+func _result_row(left: String, right: String, right_color: Color) -> HBoxContainer:
+	var r := UIKit.hbox(16)
+	r.add_child(UIKit.label(left, "", UIKit.DIM))
+	r.add_child(UIKit.expander())
+	if right != "":
+		r.add_child(UIKit.label(right, "", right_color))
+	return r
+
+
+func _goto_hub_tab(tab: String) -> void:
 	var gm = get_node_or_null("/root/GameManager")
-	if not gm:
-		return
-	var goal: Dictionary = gm.get_next_armory_goal()
-	if goal.is_empty():
-		return
-	var cost: int = goal["cost"]
-	var text: String
-	var col: Color
-	if gm.survival_coins >= cost:
-		text = "▶ UPGRADE READY: %s LV.%d (%d SC) — visit the Armory" % [goal["name"], goal["level"], cost]
-		col = Color(0.35, 1.0, 0.55)
-	else:
-		text = "▶ NEXT: %s LV.%d — %d SC more" % [goal["name"], goal["level"], cost - int(gm.survival_coins)]
-		col = Color(0.8, 0.8, 0.85)
-	_add_result_label(parent, text, 28, col)
+	if gm:
+		gm.pending_hub_tab = tab
+	goto_main_menu()
 
-func _add_result_label(parent: Control, text: String, font_size: int, col: Color) -> void:
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", col)
-	parent.add_child(label)
 
 func show_street_cleared_banner() -> void:
 	if not street_cleared_banner:
 		return
 	street_cleared_banner.visible = true
-	street_cleared_banner.position.y = -100.0
+	street_cleared_banner.position.y = 500.0
 	street_cleared_banner.modulate.a = 0.0
-	
 	var tween := create_tween()
-	tween.tween_property(street_cleared_banner, "position:y", 105.0, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(street_cleared_banner, "modulate:a", 1.0, 0.3)
-	
-	# Stay for 4.5s then smoothly dismiss
-	tween.tween_interval(4.5)
-	tween.tween_property(street_cleared_banner, "position:y", -100.0, 0.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.parallel().tween_property(street_cleared_banner, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(func(): street_cleared_banner.visible = false)
+	tween.tween_property(street_cleared_banner, "position:y", 520.0, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(street_cleared_banner, "modulate:a", 1.0, 0.25)
+	tween.tween_interval(3.5)
+	tween.tween_property(street_cleared_banner, "modulate:a", 0.0, 0.4)
+	tween.tween_callback(_hide_street_banner)
+
+func _hide_street_banner() -> void:
+	street_cleared_banner.visible = false
 
 func toggle_pause() -> void:
-	var is_paused := get_tree().paused
-	if is_paused:
+	if _pause_layer:
 		resume_game()
-	else:
+	elif not get_tree().paused:
 		get_tree().paused = true
-		pause_modal.visible = true
+		_show_pause_menu()
+
+func _show_pause_menu() -> void:
+	_abandon_armed = false
+	_pause_layer = Control.new()
+	_pause_layer.name = "PauseMenu"
+	_pause_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_pause_layer)
+	_pause_layer.add_child(UIKit.overlay(0.86))
+	var col := UIKit.vbox(24)
+	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	col.offset_left = UIKit.MARGIN * 2
+	col.offset_right = -UIKit.MARGIN * 2
+	col.offset_top = 640
+	col.offset_bottom = -400
+	_pause_layer.add_child(col)
+	var title := UIKit.label("PAUSED", "DisplayLabel")
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(title)
+	col.add_child(UIKit.spacer(20))
+	var resume := UIKit.button("Resume")
+	resume.pressed.connect(resume_game)
+	col.add_child(resume)
+	var settings := UIKit.button("Settings", "GhostButton")
+	settings.pressed.connect(open_settings)
+	col.add_child(settings)
+	_abandon_btn = UIKit.button("Abandon mission", "GhostButton")
+	_abandon_btn.add_theme_color_override("font_color", Color(1.0, 0.42, 0.45))
+	_abandon_btn.pressed.connect(_on_abandon_pressed)
+	col.add_child(_abandon_btn)
+
+func _on_abandon_pressed() -> void:
+	if not _abandon_armed:
+		_abandon_armed = true
+		_abandon_btn.text = "TAP AGAIN: RUN LOOT IS LOST"
+		return
+	goto_main_menu()
 
 func resume_game() -> void:
 	get_tree().paused = false
+	if _pause_layer:
+		_pause_layer.queue_free()
+		_pause_layer = null
 	pause_modal.visible = false
 	settings_modal.visible = false
 
@@ -696,7 +773,7 @@ func _abandon_active_run() -> void:
 		gm.abandon_mission()
 
 func open_settings() -> void:
-	settings_modal.visible = true
+	SettingsScreen.open(self)
 
 func close_settings() -> void:
 	settings_modal.visible = false
@@ -704,7 +781,7 @@ func close_settings() -> void:
 func goto_main_menu() -> void:
 	_abandon_active_run()
 	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/ui/outpost_hub.tscn")
+	get_tree().change_scene_to_file("res://scenes/ui/hub_screen.tscn")
 
 func _on_shake_toggled() -> void:
 	screen_shake_enabled = not screen_shake_enabled
@@ -730,6 +807,8 @@ func _on_joystick_vector(vec: Vector2) -> void:
 
 func _on_fire_down() -> void:
 	is_fire_dragging = true
+	_fire_down_ms = Time.get_ticks_msec()
+	_fire_dragged = false
 	if player:
 		player.mobile_fire_pressed = true
 
@@ -738,6 +817,9 @@ func _on_fire_up() -> void:
 	if player:
 		player.mobile_fire_pressed = false
 		player.mobile_aim_input = Vector2.ZERO
+	# A quick tap (no drag) toggles auto-fire; holding or dragging is manual aim
+	if not _fire_dragged and Time.get_ticks_msec() - _fire_down_ms < FIRE_TAP_MS:
+		_on_auto_fire_pressed()
 
 func _on_super_blast_down() -> void:
 	if player and player.super_blast_timer <= 0.0:
@@ -778,15 +860,150 @@ func _on_super_blast_pressed() -> void:
 func _on_health_changed(current: float, max_val: float) -> void:
 	health_bar.max_value = max_val
 	health_bar.value = current
+	_hp = current
+	_update_stats()
 
 func _on_super_blast_cooldown(ratio: float) -> void:
-	if super_blast_cooldown_overlay:
-		super_blast_cooldown_overlay.anchor_top = 1.0 - ratio
-		super_blast_button.disabled = (ratio > 0.01)
-		super_blast_button.modulate.a = 0.55 if (ratio > 0.01) else 1.0
+	super_blast_button.disabled = (ratio > 0.01)
+	if _blast_skin:
+		_blast_skin.cooldown = ratio
 
 func _on_zombie_count_changed(alive_count: int, total_kills: int) -> void:
-	zombie_count_label.text = "💀 %02d  |  KILLS: %d" % [alive_count, total_kills]
+	zombie_count_label.text = "%02d  |  KILLS: %d" % [alive_count, total_kills]
+	_kills = total_kills
+	_update_stats()
+
+func _on_run_loot_changed(current_sc: int, _current_rc: int) -> void:
+	_run_sc = current_sc
+	_update_stats()
+
+func _update_stats() -> void:
+	if _stats_label:
+		_stats_label.text = "%d HP   ·   %d KILLS   ·   +%d SC" % [int(ceil(_hp)), _kills, _run_sc]
+
+
+## Builds the release HUD on top of the existing nodes (their signals and gameplay
+## wiring are untouched): re-skins the round buttons, adds the stats card and the
+## pause button, restyles the mission line and banner, hides debug readouts.
+func _apply_release_ui() -> void:
+	fps_label.visible = OS.is_debug_build()
+	if fps_label.visible:
+		fps_label.label_settings = null
+		fps_label.add_theme_font_size_override("font_size", UIKit.SIZE_CAPTION)
+		fps_label.add_theme_color_override("font_color", UIKit.GREEN)
+	zombie_count_label.visible = false
+	wave_label.visible = false
+	pause_button.visible = false
+	if auto_fire_btn:
+		auto_fire_btn.visible = false
+	
+	# Health + run stats card, top-left
+	var stats_card := UIKit.card()
+	stats_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stats_card.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	stats_card.offset_left = UIKit.MARGIN
+	stats_card.offset_top = UIKit.TOP_SAFE
+	stats_card.offset_right = UIKit.MARGIN + 560
+	var stats_col := UIKit.vbox(10)
+	stats_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stats_card.add_child(stats_col)
+	health_bar.reparent(stats_col, false)
+	health_bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	health_bar.custom_minimum_size = Vector2(480, 28)
+	health_bar.show_percentage = false
+	var hb_bg := StyleBoxFlat.new()
+	hb_bg.bg_color = UIKit.BAR_BG
+	var hb_fill := StyleBoxFlat.new()
+	hb_fill.bg_color = UIKit.CRIMSON
+	health_bar.add_theme_stylebox_override("background", hb_bg)
+	health_bar.add_theme_stylebox_override("fill", hb_fill)
+	_stats_label = UIKit.label("", "SubheadLabel", UIKit.TEXT, 34)
+	stats_col.add_child(_stats_label)
+	top_bar.add_child(stats_card)
+	
+	# Pause, top-right
+	_pause_btn = Button.new()
+	_pause_btn.theme_type_variation = "GhostButton"
+	_pause_btn.icon = UIKit.icon_texture("pause")
+	_pause_btn.expand_icon = true
+	_pause_btn.focus_mode = Control.FOCUS_NONE
+	_pause_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_pause_btn.offset_left = -UIKit.MARGIN - UIKit.MIN_TOUCH
+	_pause_btn.offset_right = -UIKit.MARGIN
+	_pause_btn.offset_top = UIKit.TOP_SAFE
+	_pause_btn.offset_bottom = UIKit.TOP_SAFE + UIKit.MIN_TOUCH
+	_pause_btn.pressed.connect(toggle_pause)
+	top_bar.add_child(_pause_btn)
+	
+	# Mission line
+	mission_pill.theme_type_variation = ""
+	mission_pill.remove_theme_stylebox_override("panel")
+	mission_label.label_settings = null
+	mission_label.theme_type_variation = "SubheadLabel"
+	mission_label.add_theme_font_size_override("font_size", 40)
+	mission_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	mission_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	
+	# Banner (objective complete, evac inbound, ...)
+	var banner_style := StyleBoxFlat.new()
+	banner_style.bg_color = Color(UIKit.PANEL, 0.94)
+	banner_style.border_color = UIKit.AMBER
+	banner_style.border_width_left = 10
+	street_cleared_banner.add_theme_stylebox_override("panel", banner_style)
+	street_cleared_banner.offset_left = -440.0
+	street_cleared_banner.offset_right = 440.0
+	for child_name in ["Title", "Sub"]:
+		var bl := street_cleared_banner.get_node_or_null(child_name) as Label
+		if bl:
+			bl.label_settings = null
+			bl.offset_left = -420.0
+			bl.offset_right = 420.0
+			bl.theme_type_variation = "SubheadLabel" if child_name == "Title" else "CaptionLabel"
+			bl.add_theme_color_override("font_color", UIKit.AMBER if child_name == "Title" else UIKit.TEXT_SOFT)
+	
+	# Power-up widget text
+	if powerup_title:
+		powerup_title.label_settings = null
+		powerup_title.theme_type_variation = "CaptionLabel"
+		powerup_title.add_theme_color_override("font_color", UIKit.AMBER)
+	
+	# Round buttons
+	_fire_skin = _skin(fire_button, "fire", UIKit.CRIMSON, UIKit.TEXT)
+	_fire_skin.ring = UIKit.CRIMSON_DARK
+	_fire_skin.ring_width = 8.0
+	_molotov_skin = _skin(molotov_button, "molotov", Color(UIKit.PANEL, 0.88), UIKit.AMBER)
+	_blast_skin = _skin(super_blast_button, "rocket", Color(UIKit.PANEL, 0.88), UIKit.TEXT)
+	_blast_skin.text = "BLAST"
+	_climb_skin = _skin(climb_button, "charge", Color(UIKit.PANEL, 0.75), UIKit.CYAN)
+	if player:
+		_update_auto_fire_ui(player.auto_fire_enabled)
+		_on_molotov_ammo_changed(player.molotov_ammo, player.max_molotov_ammo)
+		_on_vault_state_changed(player.can_vault)
+	
+	var gm = get_node_or_null("/root/GameManager")
+	if gm:
+		gm.in_run_loot_changed.connect(_on_run_loot_changed)
+		_run_sc = gm.in_run_sc
+	_update_stats()
+
+
+## Replaces a TextureButton's art with a drawn round skin (input wiring unchanged).
+func _skin(btn: TextureButton, icon_name: String, fill: Color, icon_color: Color) -> RoundButtonSkin:
+	btn.texture_normal = null
+	btn.texture_pressed = null
+	btn.texture_hover = null
+	btn.texture_disabled = null
+	btn.modulate = Color.WHITE
+	for child in btn.get_children():
+		if child is CanvasItem:
+			(child as CanvasItem).visible = false
+	var skin := RoundButtonSkin.new()
+	skin.fill = fill
+	skin.icon = UIKit.icon_texture(icon_name)
+	skin.icon_color = icon_color
+	skin.text_color = icon_color
+	btn.add_child(skin)
+	return skin
 
 func _on_wave_started(wave_number: int) -> void:
 	wave_label.text = "WAVE %02d" % wave_number
