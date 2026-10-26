@@ -232,6 +232,14 @@ func _process_chase(delta: float, dist_to_player: float) -> void:
 	to_target.y = 0.0
 	var move_dir := to_target.normalized()
 	
+	# Path around walls, up stairs and through doorways using the sector's shared flow
+	# field; the last couple of metres are a direct lunge at the player.
+	var chasing_player := target_pos == target_player.global_position
+	if chasing_player and dist_to_player > 2.5 and FlowField.instance:
+		var flow := FlowField.instance.get_direction(global_position)
+		if flow != Vector3.ZERO:
+			move_dir = flow
+	
 	# Wall & Obstacle sliding (no building scaling!)
 	if is_on_wall():
 		var wall_norm := get_wall_normal()

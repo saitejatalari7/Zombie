@@ -335,9 +335,24 @@ def compute_barriers(cells, blocks):
     return out
 
 
+NAV_X0, NAV_Z0, NAV_W, NAV_H = -35.0, -60.0, 140, 210  # 0.5 m cells covering x -35..35, z -60..45
+
+
+def build_nav_grid(cells):
+    """Walkable grid for the zombie flow field: one string per row, one char per cell.
+    '.' = not walkable, otherwise chr(48 + floor height in decimetres)."""
+    rows = [["."] * NAV_W for _ in range(NAV_H)]
+    for x, y, z in cells:
+        i = math.floor((x - NAV_X0) / CELL)
+        j = math.floor((z - NAV_Z0) / CELL)
+        if 0 <= i < NAV_W and 0 <= j < NAV_H:
+            rows[j][i] = chr(48 + int(round(y * 10)))
+    return dict(x0=NAV_X0, z0=NAV_Z0, cell=CELL, w=NAV_W, h=NAV_H, rows=["".join(r) for r in rows])
+
+
 def export_gdscript(data, path):
     """Write the plan as a GDScript constant so it ships in every export (JSON files don't by default)."""
-    game = {k: data[k] for k in ("sector", "floors", "stairs", "blocks", "rooms", "barriers", "props", "markers", "marker_names")}
+    game = {k: data[k] for k in ("sector", "floors", "stairs", "blocks", "rooms", "barriers", "props", "markers", "marker_names", "nav")}
     # Room interiors and door thresholds are built by LayoutBuilder._build_room, not as plain floors
     game["floors"] = [f for f in game["floors"] if not any(f["name"].startswith(r["name"]) for r in game["rooms"])]
     body = json.dumps(game, indent="\t")
@@ -393,6 +408,7 @@ def main():
         floors=[dict(name=n, x0=a, x1=b, z0=c, z1=d, y=y) for n, a, b, c, d, y in FLOORS],
         stairs=[dict(name=n, x0=a, x1=b, z0=c, z1=d, y0=y0, y1=y1) for n, a, b, c, d, y0, y1 in STAIRS],
         sector=SECTOR, blocks=out_blocks, markers=MARKERS, marker_names=MARKER_NAMES, barriers=barriers,
+        nav=build_nav_grid(cells),
         rooms=[dict(name=n, x0=a, x1=b, z0=c, z1=d, base=y, height=h,
                     doors=[dict(side=ds, at=at, width=w) for ds, at, w in doors])
                for n, a, b, c, d, y, h, doors in ROOMS],

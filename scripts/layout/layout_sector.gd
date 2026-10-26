@@ -16,6 +16,11 @@ func _enter_tree() -> void:
 		return
 	var plan: Dictionary = plan_source.get_script_constant_map().get("PLAN", {})
 	LayoutBuilder.build(plan, self)
+	if plan.has("nav"):
+		var field := FlowField.new()
+		field.name = "FlowField"
+		field.setup(plan["nav"])
+		add_child(field)
 
 
 func _ensure_procedural_vegetation() -> void:
