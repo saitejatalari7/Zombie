@@ -9,7 +9,7 @@ height = 1.5
 
 [node name="ZombieRunner" type="CharacterBody3D" groups=["runners", "zombies"]]
 collision_layer = 2
-collision_mask = 1
+collision_mask = 5
 script = ExtResource("1_script")
 base_speed = 4.5
 max_health = 60.0

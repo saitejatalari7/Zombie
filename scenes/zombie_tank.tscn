@@ -9,7 +9,7 @@ height = 2.4
 
 [node name="ZombieTank" type="CharacterBody3D" groups=["bosses", "zombies"]]
 collision_layer = 2
-collision_mask = 1
+collision_mask = 5
 script = ExtResource("1_script")
 base_speed = 1.1
 max_health = 450.0

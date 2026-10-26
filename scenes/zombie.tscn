@@ -9,7 +9,7 @@ height = 1.6
 
 [node name="Zombie" type="CharacterBody3D" groups=["zombies"]]
 collision_layer = 2
-collision_mask = 1
+collision_mask = 5
 script = ExtResource("1_script")
 base_speed = 1.4
 attack_damage = 12.0
