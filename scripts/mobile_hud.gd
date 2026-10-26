@@ -524,6 +524,7 @@ func show_mission_result(summary: Dictionary) -> void:
 	var layer := Control.new()
 	layer.name = "MissionResult"
 	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_theme(layer)
 	add_child(layer)
 	layer.add_child(UIKit.overlay(0.97))
 	var col := UIKit.vbox(26)
@@ -670,6 +671,7 @@ func _show_pause_menu() -> void:
 	_pause_layer = Control.new()
 	_pause_layer.name = "PauseMenu"
 	_pause_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_theme(_pause_layer)
 	add_child(_pause_layer)
 	_pause_layer.add_child(UIKit.overlay(0.86))
 	var col := UIKit.vbox(24)
@@ -833,6 +835,10 @@ func _update_stats() -> void:
 ## wiring are untouched): re-skins the round buttons, adds the stats card and the
 ## pause button, restyles the mission line and banner, hides debug readouts.
 func _apply_release_ui() -> void:
+	# The HUD is a CanvasLayer, which blocks theme inheritance: theme its roots.
+	for child in get_children():
+		if child is Control:
+			_theme(child)
 	fps_label.visible = OS.is_debug_build()
 	if fps_label.visible:
 		fps_label.label_settings = null
@@ -932,6 +938,11 @@ func _apply_release_ui() -> void:
 		gm.in_run_loot_changed.connect(_on_run_loot_changed)
 		_run_sc = gm.in_run_sc
 	_update_stats()
+
+
+func _theme(c: Control) -> void:
+	if c.theme == null:
+		c.theme = get_tree().root.theme
 
 
 ## Replaces a TextureButton's art with a drawn round skin (input wiring unchanged).

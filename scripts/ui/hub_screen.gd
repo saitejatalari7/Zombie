@@ -370,12 +370,6 @@ func _sector_card(s: int) -> Control:
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	card.gui_input.connect(_on_sector_card_input)
 
-	# Big faint sector number in the corner
-	var mark := UIKit.label("%02d" % s, "DisplayLabel", Color(UIKit.TEXT, 0.05), 330)
-	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	mark.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	card.add_child(mark)
-
 	var v := UIKit.vbox(18)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(v)
@@ -418,7 +412,8 @@ func _sector_pager(sectors: Array) -> Control:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	var idx := sectors.find(selected_sector)
 	var prev := UIKit.button("‹", "GhostButton", 100)
-	prev.custom_minimum_size.x = 120
+	prev.custom_minimum_size.x = 140
+	prev.add_theme_font_size_override("font_size", 80)
 	prev.disabled = idx <= 0
 	prev.pressed.connect(_step_sector.bind(-1))
 	row.add_child(prev)
@@ -435,7 +430,8 @@ func _sector_pager(sectors: Array) -> Control:
 		dots.add_child(d)
 	row.add_child(dots)
 	var next := UIKit.button("›", "GhostButton", 100)
-	next.custom_minimum_size.x = 120
+	next.custom_minimum_size.x = 140
+	next.add_theme_font_size_override("font_size", 80)
 	next.disabled = idx >= sectors.size() - 1
 	next.pressed.connect(_step_sector.bind(1))
 	row.add_child(next)

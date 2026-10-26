@@ -18,6 +18,11 @@ func _ready() -> void:
 	font_display_heavy = load("res://assets/ui/fonts/BarlowCondensed-ExtraBold.woff2")
 	theme = _build()
 	get_tree().root.theme = theme
+	# Controls under a CanvasLayer (the in-run HUD, loading screen) don't inherit
+	# the window's theme, so also fold it into the engine default they fall back to.
+	ThemeDB.get_default_theme().merge_with(theme)
+	ThemeDB.fallback_font = font_body
+	ThemeDB.fallback_font_size = UIKit.SIZE_BODY
 
 
 func _flat(bg: Color, border: Color = Color(0, 0, 0, 0), border_bottom: int = 0, margin_h: int = 28, margin_v: int = 16, radius: int = 0) -> StyleBoxFlat:

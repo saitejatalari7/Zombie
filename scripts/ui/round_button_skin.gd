@@ -41,9 +41,20 @@ var cooldown: float = 0.0:
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	resized.connect(queue_redraw)
+	# Track the button's rect directly rather than relying on anchors.
+	var host := get_parent() as Control
+	if host:
+		host.resized.connect(_fit)
+	_fit.call_deferred()
+
+
+func _fit() -> void:
+	var host := get_parent() as Control
+	if host:
+		position = Vector2.ZERO
+		size = host.size
+	queue_redraw()
 
 
 func _draw() -> void:

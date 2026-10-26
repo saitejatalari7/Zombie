@@ -19,6 +19,8 @@ static func open(parent: Node) -> SettingsScreen:
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if theme == null:
+		theme = get_tree().root.theme  # may be opened under a CanvasLayer (pause menu)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(UIKit.overlay(0.96))
