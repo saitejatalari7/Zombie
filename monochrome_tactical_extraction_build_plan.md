@@ -1,4 +1,4 @@
-# Project Specification: PROTOCOL: CRIMSON (Working Title)
+# Project Specification: PROTOCOL: CRIMSON
 
 **Engine:** Godot 4.x (Universal Render Pipeline / Forward+ or Mobile Renderer)  
 **Primary Target Platform:** Android (API 33+, 60 FPS target on mid-range devices)  

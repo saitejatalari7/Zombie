@@ -19,6 +19,15 @@ echo [1/3] Getting the latest changes from GitHub (%BRANCH%)...
 git fetch origin %BRANCH%
 if errorlevel 1 goto fail_net
 
+REM Files Godot generated locally (or local edits) can block the update. Keep them
+REM in a git stash instead of failing: "git stash list" shows them, nothing is lost.
+set "DIRTY="
+for /f "delims=" %%s in ('git status --porcelain') do set "DIRTY=1"
+if defined DIRTY (
+    echo     Local changes found. Saving them with git stash so the update can apply...
+    git stash push -u -m "update_and_play auto-backup" >nul
+)
+
 for /f "delims=" %%b in ('git rev-parse --abbrev-ref HEAD') do set "CURRENT=%%b"
 if /i not "%CURRENT%"=="%BRANCH%" (
     git checkout %BRANCH%
@@ -26,6 +35,8 @@ if /i not "%CURRENT%"=="%BRANCH%" (
 )
 git pull --ff-only origin %BRANCH%
 if errorlevel 1 goto fail_local
+echo     Now on:
+git log --oneline -1
 
 echo [2/3] Refreshing Godot imports and script classes...
 "%GODOT%" --headless --path "%~dp0." --import >nul 2>&1
