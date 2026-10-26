@@ -14,6 +14,7 @@ const MAX_ACTIVE_PATCHES: int = 3
 var elapsed: float = 0.0
 var tick_timer: float = 0.0
 var dying: bool = false
+var _crackle: AudioStreamPlayer = null
 
 @onready var particles: GPUParticles3D = $FireParticles
 @onready var light: OmniLight3D = get_node_or_null("FireLight") as OmniLight3D
@@ -25,6 +26,9 @@ func _ready() -> void:
 		if is_instance_valid(oldest) and not oldest.dying:
 			oldest._fade_out()
 	active_patches.append(self)
+	_crackle = AudioManager.attach_loop(self, "fire_loop", -40.0)
+	if _crackle:
+		create_tween().tween_property(_crackle, "volume_db", -8.0, 0.4)
 	
 	# Burn scorched ground mark if BloodManager exists
 	if BloodManager.instance:
@@ -64,6 +68,8 @@ func _fade_out() -> void:
 	dying = true
 	if particles:
 		particles.emitting = false
+	if _crackle:
+		create_tween().tween_property(_crackle, "volume_db", -40.0, 0.9)
 	var tween := create_tween()
 	if light and is_instance_valid(light):
 		tween.tween_property(light, "light_energy", 0.0, 1.0)

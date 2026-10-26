@@ -588,6 +588,7 @@ func _start_reload() -> void:
 		return
 	reload_timer = RELOAD_TIME
 	ammo_changed.emit(mag_ammo, mag_size, 0.001)
+	AudioManager.play_sfx("gun_reload", -3.0)
 
 
 func _tick_reload(delta: float) -> void:
@@ -745,6 +746,7 @@ func throw_molotov_at_target(target_pt: Vector3) -> bool:
 		rotation.y = atan2(-diff.x, -diff.z)
 		
 	molotov.init_target(spawn_pos, target_pt)
+	AudioManager.play_sfx_varied("molotov_throw", -2.0)
 	return true
 
 func refill_molotov(amount: int = 3) -> void:
@@ -755,6 +757,7 @@ func activate_hyper_burst(duration: float = 15.0) -> void:
 	is_hyper_burst = true
 	hyper_burst_timer = duration
 	hyper_burst_max = duration
+	AudioManager.play_sfx("hyper_burst_activate", -1.0)
 	emit_signal("powerup_timer_changed", duration, duration)
 	emit_signal("powerup_activated", "HYPER-BURST OVERDRIVE", duration)
 
@@ -793,6 +796,7 @@ func fire_rifle(_primary_target: Node3D = null) -> void:
 	if has_blood_siphon and in_blood:
 		effective_fire_rate *= SIPHON_FIRE_RATE_MULT
 	fire_timer = effective_fire_rate
+	AudioManager.play_sfx_throttled("gun_fire", 0.05, -5.0, 0.06)
 	if not is_hyper_burst:  # overdrive rounds are free
 		mag_ammo -= 1
 		ammo_changed.emit(mag_ammo, mag_size, 0.0)
@@ -890,6 +894,7 @@ func _launch_single_rocket(dir: Vector3, wobble: float, is_heavy: bool = false) 
 	get_parent().add_child(r)
 	r.global_position = launcher_muzzle.global_position
 	r.setup(dir, wobble, is_heavy)
+	AudioManager.play_sfx_varied("rocket_fire", -2.0, 0.06)
 	
 	# Launch flash
 	var flash := muzzle_scene.instantiate()
@@ -898,6 +903,7 @@ func _launch_single_rocket(dir: Vector3, wobble: float, is_heavy: bool = false) 
 
 func _on_step_taken() -> void:
 	left_foot_step = not left_foot_step
+	AudioManager.play_sfx_varied("player_footstep", -15.0, 0.1)
 	
 	# Check if stepping in blood
 	if BloodManager.instance and BloodManager.instance.is_stepping_in_blood(global_position):
@@ -987,6 +993,9 @@ func take_damage(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		return
 	current_health = maxf(0.0, current_health - amount)
 	emit_signal("health_changed", current_health, max_health)
+	if current_health > 0.0:
+		AudioManager.play_sfx_throttled("player_hurt", 0.45, -3.0, 0.08)
+		AudioManager.haptic_light()
 	
 	var cam := get_viewport().get_camera_3d()
 	if cam and cam.has_method("add_trauma"):
@@ -997,6 +1006,7 @@ func take_damage(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	
 	if current_health <= 0.0:
 		# Player death
+		AudioManager.play_sfx("player_death")
 		is_dead = true
 		set_physics_process(false)
 		mobile_fire_pressed = false

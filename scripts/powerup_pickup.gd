@@ -15,6 +15,7 @@ func _physics_process(delta: float) -> void:
 
 func _on_body_entered(body: Node3D) -> void:
 	if body and body.is_in_group("player"):
+		AudioManager.play_sfx("powerup_pickup", -2.0)
 		if body.has_method("refill_molotov"):
 			body.refill_molotov(3)
 		if body.has_method("activate_molotov_powerup"):

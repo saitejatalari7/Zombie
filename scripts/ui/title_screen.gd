@@ -9,6 +9,7 @@ const DIORAMA_SCENE := preload("res://scenes/ui/outpost_diorama.tscn")
 
 
 func _ready() -> void:
+	AudioManager.play_music_track("menu")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = UIKit.BG

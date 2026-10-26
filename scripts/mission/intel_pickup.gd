@@ -53,5 +53,6 @@ func _process(delta: float) -> void:
 
 func _on_body_entered(body: Node3D) -> void:
 	if body is Player:
+		AudioManager.play_sfx("intel_pickup", -1.0)
 		collected.emit(intel_id)
 		queue_free()

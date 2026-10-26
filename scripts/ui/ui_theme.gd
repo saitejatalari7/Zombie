@@ -23,6 +23,8 @@ func _ready() -> void:
 	ThemeDB.get_default_theme().merge_with(theme)
 	ThemeDB.fallback_font = font_body
 	ThemeDB.fallback_font_size = UIKit.SIZE_BODY
+	# Every menu button clicks (combat controls are TextureButtons and stay silent)
+	get_tree().node_added.connect(_on_node_added)
 
 
 func _flat(bg: Color, border: Color = Color(0, 0, 0, 0), border_bottom: int = 0, margin_h: int = 28, margin_v: int = 16, radius: int = 0) -> StyleBoxFlat:
@@ -135,3 +137,14 @@ func _build() -> Theme:
 	t.set_stylebox("scroll", "VScrollBar", _flat(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 4, 0))
 	t.set_stylebox("grabber", "VScrollBar", _flat(UIKit.LINE, Color(0, 0, 0, 0), 0, 4, 0, 4))
 	return t
+
+
+func _on_node_added(node: Node) -> void:
+	if node is Button:
+		(node as Button).pressed.connect(_button_click)
+
+
+func _button_click() -> void:
+	var am := get_node_or_null("/root/AudioManager")
+	if am:
+		am.play_sfx_throttled("ui_click", 0.08, -4.0, 0.03)

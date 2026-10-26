@@ -99,6 +99,7 @@ func explode() -> void:
 	if exploded:
 		return
 	exploded = true
+	AudioManager.play_sfx_near("molotov_shatter", global_position, 0.0)
 	
 	# Spawn ground fire patch at exact impact elevation
 	var patch: Node3D = fire_patch_scene.instantiate()

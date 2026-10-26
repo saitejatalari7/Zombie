@@ -46,6 +46,11 @@ func _current() -> Dictionary:
 	return steps[index] if index >= 0 and index < steps.size() else {}
 
 
+## The running step's type ("" when the contract is done). Main picks the music from it.
+func current_step_type() -> String:
+	return String(_current().get("type", ""))
+
+
 func _next_step() -> void:
 	progress_changed.emit(0.0, false)
 	if spawner:

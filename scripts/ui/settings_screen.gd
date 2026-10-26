@@ -39,6 +39,7 @@ func _ready() -> void:
 	var gm = get_node_or_null("/root/GameManager")
 
 	root.add_child(UIKit.label("AUDIO", "CaptionLabel"))
+	root.add_child(_slider_row("Master", am.master_volume if am else 1.0, _set_master))
 	root.add_child(_slider_row("Music", am.music_volume if am else 0.7, _set_music))
 	root.add_child(_slider_row("Effects", am.sfx_volume if am else 1.0, _set_effects))
 	
@@ -112,6 +113,13 @@ func _refresh_toggle(b: Button) -> void:
 
 
 # ─── Setting handlers ─────────────────────────────────────────────────────────
+func _set_master(v: float) -> void:
+	var am = get_node_or_null("/root/AudioManager")
+	if am:
+		am.master_volume = v
+		am.play_sfx_throttled("ui_click", 0.15, -4.0, 0.0)
+
+
 func _set_music(v: float) -> void:
 	var am = get_node_or_null("/root/AudioManager")
 	if am:
@@ -122,6 +130,7 @@ func _set_effects(v: float) -> void:
 	var am = get_node_or_null("/root/AudioManager")
 	if am:
 		am.sfx_volume = v
+		am.play_sfx_throttled("gun_fire", 0.2, -6.0, 0.0)  # a sample at the new level
 
 
 func _set_vibration(on: bool) -> void:

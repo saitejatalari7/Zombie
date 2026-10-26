@@ -40,6 +40,7 @@ var _blobs: Array[MeshInstance3D] = []
 var _blob_mat: StandardMaterial3D = null
 var _bar_fill: MeshInstance3D = null
 var _bar_root: Node3D = null
+var _pulse: AudioStreamPlayer = null
 
 
 func _ready() -> void:
@@ -63,6 +64,7 @@ func _ready() -> void:
 	add_child(col)
 	_build_look(r, h)
 	_build_bar(h)
+	_pulse = AudioManager.attach_loop(self, "hive_pulse_loop", -60.0)
 
 
 func _build_look(r: float, h: float) -> void:
@@ -194,6 +196,12 @@ func _process(delta: float) -> void:
 	if is_dead:
 		return
 	_age += delta
+	# The hive's heartbeat: heard from ~25 m, louder (and faster once woken) up close
+	if _pulse:
+		var dist := AudioManager._distance_to_listener(global_position)
+		var size_db := {"S": -6.0, "M": -3.0}.get(size_class, 0.0) as float
+		_pulse.volume_db = -60.0 if dist > 25.0 else size_db - 6.0 - dist * 0.9
+		_pulse.pitch_scale = 1.25 if _alerted else 1.0
 	var speed := 5.0 if _alerted else 3.0
 	for i in range(_blobs.size()):
 		var pulse := 1.0 + sin(_age * speed + float(i) * 1.7) * (0.12 if _alerted else 0.08)
@@ -237,6 +245,7 @@ func take_damage(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	if not _alerted:
 		_alerted = true
 		_spawn_timer = minf(_spawn_timer, 0.6)
+		_scream()
 		_bar_root.visible = true
 	_blob_mat.emission_energy_multiplier = 2.5
 	create_tween().tween_property(_blob_mat, "emission_energy_multiplier", 1.0, 0.15)
@@ -245,6 +254,7 @@ func take_damage(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	# Scream: a burst of defenders at every 25% lost
 	while frac <= _next_burst and _next_burst > 0.0 and spawner:
 		_next_burst -= 0.25
+		_scream()
 		# Half the scream comes out of the hive, half closes in on the shooter from the sides
 		var k := 0
 		for kind in _cfg["burst"]:
@@ -260,8 +270,19 @@ func take_damage(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		_die()
 
 
+func _scream() -> void:
+	var pitch := {"S": 1.3, "M": 1.1}.get(size_class, 0.85) as float
+	var p := AudioManager.play_sfx_throttled("hive_scream", 0.4, -2.0, 0.0)
+	if p:
+		p.pitch_scale = pitch * randf_range(0.95, 1.05)
+
+
 func _die() -> void:
 	is_dead = true
+	AudioManager.play_sfx("hive_death", 0.0 if size_class == "L" else -3.0)
+	AudioManager.haptic_heavy()
+	if _pulse:
+		_pulse.stop()
 	remove_from_group("bosses")
 	remove_from_group("hives")
 	var r: float = _cfg["radius"]

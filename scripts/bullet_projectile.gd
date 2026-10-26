@@ -104,6 +104,7 @@ func _on_hit_zombie(zombie: Node3D, hit_pos: Vector3) -> void:
 	
 	if zombie.has_method("take_damage"):
 		zombie.take_damage(final_damage, knockback_force)
+	AudioManager.play_sfx_near("bullet_impact_flesh", hit_pos, -10.0, 0.06, 0.12)
 	
 	# Spawn impact spark burst from pool
 	if BloodManager.instance:
@@ -116,6 +117,9 @@ func _on_hit_zombie(zombie: Node3D, hit_pos: Vector3) -> void:
 func _on_hit_world(hit_pos: Vector3, normal: Vector3, collider: Object) -> void:
 	if collider and collider.has_method("take_damage"):
 		collider.take_damage(damage, direction * 20.0)
+		AudioManager.play_sfx_near("bullet_impact_flesh", hit_pos, -8.0, 0.06, 0.2)
+	else:
+		AudioManager.play_sfx_near("bullet_impact_wall", hit_pos, -12.0, 0.08, 0.12)
 	
 	# Spawn impact spark burst from pool
 	if BloodManager.instance:

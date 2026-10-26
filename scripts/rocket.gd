@@ -51,6 +51,8 @@ func _on_area_entered(_area: Area3D) -> void:
 
 func explode() -> void:
 	var hit_pos := global_position
+	AudioManager.play_sfx_near("rocket_explode", hit_pos, 0.0 if is_heavy_launcher else -3.0, 0.05, 0.08)
+	AudioManager.haptic_medium()
 	
 	# Spawn explosion VFX
 	var expl: Node3D = explosion_scene.instantiate()

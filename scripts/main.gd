@@ -34,6 +34,10 @@ var evac_active: bool = false
 var evac_hold_time: float = 20.0
 var evac_time_left: float = 0.0
 var player_in_lz: bool = false
+var sector_track: String = "sector1"
+var _music_check: float = 0.0
+var _last_beep: int = -1
+var _heli: AudioStreamPlayer = null
 
 func _ready() -> void:
 	# Selected golden/dramatic raking sunlight configuration (User Pick)
@@ -51,6 +55,8 @@ func _ready() -> void:
 	hud.setup(player, spawner)
 	spawner.setup_player(player)
 	spawner.configure_for_sector(sec_id)
+	sector_track = "sector%d" % clampi(sec_id, 1, 4)
+	AudioManager.play_music_track(sector_track)
 	_start_mission(sec_id)
 	
 	# Connect legacy WoodenBarricade if present in legacy whitebox map
@@ -213,6 +219,7 @@ func _on_objective_met() -> void:
 	if job:
 		hud.show_radio("OVERWATCH", String(job.contract.get("extract_radio", "")))
 	hud.set_mission_status("EVAC UNLOCKED — REACH THE LZ", Color(1.0, 0.8, 0.1))
+	AudioManager.play_sfx("objective_complete")
 	hud.show_banner("OBJECTIVE COMPLETE — EVAC UNLOCKED", "Follow the red beacon to the extraction LZ")
 	if is_instance_valid(extraction_marker):
 		extraction_marker.visible = true
@@ -241,20 +248,47 @@ func _start_evac() -> void:
 	evac_hold_time = gm.get_evac_hold_time() if gm else 20.0
 	evac_time_left = evac_hold_time
 	spawner.evac_frenzy = true
+	_heli = AudioManager.attach_loop(self, "heli_loop", -40.0)
+	if _heli:
+		create_tween().tween_property(_heli, "volume_db", -14.0, evac_hold_time * 0.8)
 	hud.show_banner("EVAC INBOUND — HOLD THE LZ", "Stay inside the beacon until the chopper lands")
 
 func _process(delta: float) -> void:
 	_update_objective_pointer()
+	_update_music(delta)
 	if not evac_active or mission_over or player.is_dead:
 		return
 	if player_in_lz:
 		evac_time_left = maxf(0.0, evac_time_left - delta)
+		# Countdown beeps over the last five seconds
+		var sec := int(ceil(evac_time_left))
+		if sec <= 5 and sec >= 1 and sec != _last_beep:
+			_last_beep = sec
+			AudioManager.play_sfx("extraction_countdown", -4.0, 1.0 + 0.04 * float(5 - sec))
 		hud.set_mission_status("HOLD THE LZ — EVAC IN %.1fs" % evac_time_left, Color(1.0, 0.8, 0.1))
 	else:
 		hud.set_mission_status("RETURN TO THE LZ — EVAC PAUSED", Color(1.0, 0.3, 0.3))
 	hud.show_evac_progress(1.0 - evac_time_left / evac_hold_time, player_in_lz)
 	if evac_time_left <= 0.0:
 		_extract()
+
+## Boss and defend steps and the evac hold get the fight track; the rest of the run plays
+## the sector's own theme.
+func _update_music(delta: float) -> void:
+	_music_check -= delta
+	if _music_check > 0.0 or mission_over:
+		return
+	_music_check = 0.5
+	var step_type: String = job.current_step_type() if job and job.has_method("current_step_type") else ""
+	var fight := evac_active or step_type == "hunt" or step_type == "defend"
+	AudioManager.play_music_track("boss" if fight else sector_track)
+
+
+func _stop_mission_audio() -> void:
+	AudioManager.stop_music()
+	if _heli:
+		create_tween().tween_property(_heli, "volume_db", -40.0, 2.5)
+
 
 ## Arrow to the current goal: the job's objective first, then the LZ (hidden once you're in it).
 func _update_objective_pointer() -> void:
@@ -279,6 +313,10 @@ func _extract() -> void:
 	print("[Main] Player extracted!")
 	var gm = get_node_or_null("/root/GameManager")
 	var summary: Dictionary = gm.complete_mission() if gm else {}
+	_stop_mission_audio()
+	AudioManager.play_sfx("mission_complete")
+	if int(summary.get("level_after", 0)) > int(summary.get("level_before", 0)):
+		get_tree().create_timer(1.4).timeout.connect(func(): AudioManager.play_sfx("level_up"))
 	hud.show_mission_result(summary)
 
 func _on_player_died() -> void:
@@ -289,6 +327,8 @@ func _on_player_died() -> void:
 	spawner.evac_frenzy = false
 	hud.hide_evac_progress()
 	hud.set_mission_status("OPERATIVE DOWN", Color(1.0, 0.2, 0.2))
+	_stop_mission_audio()
+	AudioManager.haptic_death()
 	# Short beat so the death registers before the debrief.
 	# (connect, not await: the connection drops cleanly if the scene is left first)
 	get_tree().create_timer(1.6).timeout.connect(_resolve_death)
@@ -296,6 +336,7 @@ func _on_player_died() -> void:
 func _resolve_death() -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	var summary: Dictionary = gm.fail_mission() if gm else {}
+	AudioManager.play_sfx("mission_failed")
 	hud.show_mission_result(summary)
 
 func _on_barricade_broken() -> void:

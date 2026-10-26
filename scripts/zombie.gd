@@ -61,6 +61,9 @@ var is_burning: bool = false
 var burn_timer: float = 0.0
 var burn_tick_timer: float = 0.0
 
+## Seconds until this zombie may groan again
+var groan_timer: float = 0.0
+
 func _ready() -> void:
 	add_to_group("zombies")
 	current_health = max_health
@@ -70,8 +73,19 @@ func _ready() -> void:
 	walk_speed_factor = randf_range(2.8, 4.0)
 	walk_cycle = randf_range(0.0, TAU)
 	separation_timer = randf_range(0.0, 0.25)
+	groan_timer = randf_range(2.0, 9.0)
 	
 	_find_player()
+	_announce.call_deferred()
+
+## Runners shriek as they come out; heavies roar (deferred: hunt targets are tagged after spawn)
+func _announce() -> void:
+	if is_dead or not is_inside_tree():
+		return
+	if is_in_group("bosses"):
+		AudioManager.play_sfx_near("boss_roar", global_position, 0.0, 1.5)
+	elif is_in_group("runners"):
+		AudioManager.play_sfx_near("zombie_runner_scream", global_position, -6.0, 0.8, 0.12)
 
 ## Reward category used by GameManager.record_kill().
 func get_enemy_type() -> String:
@@ -91,6 +105,12 @@ func _find_player() -> void:
 func _physics_process(delta: float) -> void:
 	if is_dead or state == State.DEAD:
 		return
+	
+	groan_timer -= delta
+	if groan_timer <= 0.0:
+		groan_timer = randf_range(5.0, 12.0)
+		# The horde shares one voice slot a second, so twenty zombies don't become a choir
+		AudioManager.play_sfx_near("zombie_groan", global_position, -8.0, 0.9, 0.15)
 	
 	# Hit flash recovery
 	if hit_flash_timer > 0.0:
@@ -366,6 +386,9 @@ func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO) -> void:
 		stagger_timer = stagger_duration
 		_stagger_ready_at = _now() + STAGGER_IMMUNITY
 	
+	if current_health > 0.0:
+		AudioManager.play_sfx_near("zombie_hit", global_position, -9.0, 0.12, 0.15)
+	
 	# Flash red
 	hit_flash_timer = 0.08
 	_set_head_color(Color(1.0, 0.2, 0.2))
@@ -384,6 +407,11 @@ func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO) -> void:
 func die() -> void:
 	is_dead = true
 	state = State.DEAD
+	if is_in_group("bosses"):
+		AudioManager.play_sfx_near("boss_roar", global_position, -2.0, 0.5, 0.0)
+		AudioManager.haptic_heavy()
+	else:
+		AudioManager.play_sfx_near("zombie_death", global_position, -5.0, 0.08, 0.12)
 	emit_signal("died", self)
 	
 	# Disable collisions immediately so player and swarms pass freely

@@ -46,6 +46,7 @@ var _sway_t: float = 0.0
 
 
 func _ready() -> void:
+	AudioManager.play_music_track("menu")
 	gm = get_node_or_null("/root/GameManager")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
@@ -124,7 +125,7 @@ func _refresh() -> void:
 func _click() -> void:
 	var am = get_node_or_null("/root/AudioManager")
 	if am and am.has_method("play_sfx"):
-		am.play_sfx("ui_click")
+		am.play_sfx_throttled("ui_click", 0.08, -4.0, 0.03)
 
 
 # ─── Top bar ──────────────────────────────────────────────────────────────────
