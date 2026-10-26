@@ -222,7 +222,8 @@ func _process_chase(delta: float, dist_to_player: float) -> void:
 	
 	# Direction towards player or blood scent
 	var target_pos := target_player.global_position
-	if is_in_group("runners") and BloodManager.instance:
+	# Runners track blood scent, except when the player carries the objective: then they hunt the carrier
+	if is_in_group("runners") and BloodManager.instance and not target_player.carrying_objective:
 		var scent := BloodManager.instance.get_nearest_footprint(global_position, 12.0)
 		if not scent.is_empty():
 			target_pos = scent["pos"]

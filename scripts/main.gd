@@ -23,7 +23,7 @@ const SECTOR_SCENES: Dictionary = {
 var active_sector_node: SectorBase = null
 
 # ─── Mission State ───
-var kills_required: int = 25
+var job: MissionJob = null
 var objective_complete: bool = false
 var mission_over: bool = false
 var extraction_area: Area3D = null
@@ -112,16 +112,23 @@ func _load_tactical_sector(sector_id: int) -> void:
 			
 		print("[Main] Sector %d loaded successfully: %s" % [sector_id, active_sector_node.sector_name])
 
-# ─── Mission Flow: clear quota → extraction unlocks → reach LZ → debrief ───
-func _start_mission(sector_id: int) -> void:
+# ─── Mission Flow: job objective → extraction unlocks → reach LZ → debrief ───
+func _start_mission(_sector_id: int) -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	if not gm:
 		return
-	kills_required = gm.get_contract(sector_id)["kills_required"]
+	var contract: Dictionary = gm.get_active_contract()
 	gm.start_mission_run()
-	gm.in_run_kills_changed.connect(_on_run_kills_changed)
+	
+	job = MissionJob.create(contract.get("job", "kill_quota"))
+	job.name = "MissionJob"
+	job.setup(contract, active_sector_node, player)
+	add_child(job)
+	job.status_changed.connect(_on_job_status_changed)
+	job.objective_met.connect(_on_objective_met)
+	gm.in_run_kills_changed.connect(job.on_run_kills_changed)
 	player.died.connect(_on_player_died)
-	_on_run_kills_changed(0)
+	job.start()
 
 func _configure_extraction_zone(area: Area3D) -> void:
 	# Player lives on physics layer 2; sector scenes only listened on layer 1.
@@ -141,49 +148,24 @@ func _configure_extraction_zone(area: Area3D) -> void:
 		area.add_child(col)
 	
 	# Evac beacon: hidden until the contract objective is met
-	extraction_marker = Node3D.new()
+	extraction_marker = MissionJob.make_beacon(Color(1.0, 0.05, 0.12, 0.28))
 	extraction_marker.name = "EvacBeacon"
 	area.add_child(extraction_marker)
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(1.0, 0.05, 0.12, 0.28)
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	var beam_mesh := CylinderMesh.new()
-	beam_mesh.top_radius = 0.6
-	beam_mesh.bottom_radius = 0.6
-	beam_mesh.height = 14.0
-	beam_mesh.material = mat
-	var beam := MeshInstance3D.new()
-	beam.mesh = beam_mesh
-	beam.position = Vector3(0.0, 7.0, 0.0)
-	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	extraction_marker.add_child(beam)
-	var pad_mesh := CylinderMesh.new()
-	pad_mesh.top_radius = 3.0
-	pad_mesh.bottom_radius = 3.0
-	pad_mesh.height = 0.04
-	pad_mesh.material = mat
-	var pad := MeshInstance3D.new()
-	pad.mesh = pad_mesh
-	pad.position = Vector3(0.0, 0.05, 0.0)
-	pad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	extraction_marker.add_child(pad)
 	extraction_marker.visible = false
 
-func _on_run_kills_changed(run_kills: int) -> void:
+func _on_job_status_changed(text: String, color: Color) -> void:
+	if not objective_complete and not mission_over:
+		hud.set_mission_status(text, color)
+
+func _on_objective_met() -> void:
 	if objective_complete or mission_over:
 		return
-	if run_kills < kills_required:
-		hud.set_mission_status("ELIMINATE HOSTILES  %d / %d" % [run_kills, kills_required])
-		return
-	
 	objective_complete = true
 	hud.set_mission_status("EVAC UNLOCKED — REACH THE LZ ▲", Color(1.0, 0.8, 0.1))
-	hud.show_banner("⚡ ZONE CLEARED — EVAC UNLOCKED", "Follow the red beacon to the extraction LZ ➔")
+	hud.show_banner("⚡ OBJECTIVE COMPLETE — EVAC UNLOCKED", "Follow the red beacon to the extraction LZ ➔")
 	if is_instance_valid(extraction_marker):
 		extraction_marker.visible = true
-	# Already standing in the LZ when the quota completes
+	# Already standing in the LZ when the objective completes
 	if extraction_area and extraction_area.overlaps_body(player):
 		_on_extraction_zone_entered(player)
 
@@ -191,7 +173,7 @@ func _on_extraction_zone_entered(body: Node3D) -> void:
 	if body != player or mission_over or player.is_dead:
 		return
 	if not objective_complete:
-		hud.show_banner("LZ LOCKED", "Eliminate %d hostiles before evac" % kills_required)
+		hud.show_banner("LZ LOCKED", job.get_locked_hint() if job else "")
 		return
 	
 	mission_over = true

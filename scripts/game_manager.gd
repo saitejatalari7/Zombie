@@ -24,53 +24,83 @@ const SAVE_BACKUP_PATH := "user://protocol_crimson_save.bak"
 const SAVE_KEY := "CR1MS0N_PR0T0C0L_K3Y"
 const SAVE_VERSION := 2
 
-## Contract dossiers per Sector. Single source of truth for the Command Board
-## text AND the actual payout, so the hub can never advertise one reward and pay another.
+## Contract dossiers per Sector (a list: the Command Board lets the player pick one).
+## Single source of truth for the board text AND the actual payout, so the hub can
+## never advertise one reward and pay another. "job" selects the MissionJob script.
 const CONTRACTS: Dictionary = {
-	1: {
-		"title": "SECTOR 01: RESIDENTIAL EXTRACTION",
-		"desc": "Breach quarantine zone. Retrieve encrypted flight recorder from military lockbox and extract before runner swarms corner the corridor.",
-		"type": "TYPE: ASSET RECOVERY",
-		"threat": "THREAT: LOW [SHAMBLERS]",
-		"payout_sc": 350,
-		"payout_rc": 1,
-		"xp": 120,
-		"kills_required": 25,
-		"is_night": false,
-	},
-	2: {
-		"title": "SECTOR 02: COMMERCIAL TRANSIT RESCUE",
-		"desc": "Locate barricaded survivor medic in transit terminal. Escort VIP to helipad across high-density runner corridors.",
-		"type": "TYPE: VIP ESCORT",
-		"threat": "THREAT: MEDIUM [RUNNERS]",
-		"payout_sc": 600,
-		"payout_rc": 2,
-		"xp": 260,
-		"kills_required": 35,
-		"is_night": false,
-	},
-	3: {
-		"title": "SECTOR 03: BLACKOUT SILO PURGE",
-		"desc": "Night Operations mandatory. Restore power to emergency generators using gun torch, purge Crimson Boss, extract via flare.",
-		"type": "TYPE: NIGHT PURGE",
-		"threat": "THREAT: SEVERE [NIGHT OPS]",
-		"payout_sc": 950,
-		"payout_rc": 3,
-		"xp": 450,
-		"kills_required": 45,
-		"is_night": true,
-	},
-	4: {
-		"title": "SECTOR 04: CRIMSON BIO-COMPLEX",
-		"desc": "Infiltrate deep containment lab. Plant centrifuge extractors on biomass nodes, defend against 3-wave containment breach, harvest cores.",
-		"type": "TYPE: BIO-LAB HARVEST",
-		"threat": "THREAT: CRITICAL [BOSS BREACH]",
-		"payout_sc": 1500,
-		"payout_rc": 6,
-		"xp": 700,
-		"kills_required": 60,
-		"is_night": false,
-	},
+	1: [
+		{
+			"id": "s1_sweep",
+			"job": "kill_quota",
+			"title": "SECTOR 01: QUARANTINE SWEEP",
+			"desc": "Residential block overrun. Thin the infected inside the cordon, then call evac from the upper terrace.",
+			"type": "TYPE: SWEEP & CLEAR",
+			"threat": "THREAT: LOW [SHAMBLERS]",
+			"payout_sc": 350,
+			"payout_rc": 1,
+			"xp": 120,
+			"kills_required": 25,
+			"is_night": false,
+		},
+		{
+			"id": "s1_recovery",
+			"job": "asset_recovery",
+			"title": "SECTOR 01: FLIGHT RECORDER RECOVERY",
+			"desc": "Retrieve the encrypted flight recorder from the quarantine zone and extract before runner swarms corner you. Carrying it slows you down and draws the runners.",
+			"type": "TYPE: ASSET RECOVERY",
+			"threat": "THREAT: LOW [RUNNERS HUNT CARRIER]",
+			"payout_sc": 420,
+			"payout_rc": 2,
+			"xp": 150,
+			"kills_required": 0,
+			"is_night": false,
+		},
+	],
+	2: [
+		{
+			"id": "s2_rescue",
+			"job": "kill_quota",
+			"title": "SECTOR 02: COMMERCIAL TRANSIT RESCUE",
+			"desc": "Locate barricaded survivor medic in transit terminal. Escort VIP to helipad across high-density runner corridors.",
+			"type": "TYPE: VIP ESCORT",
+			"threat": "THREAT: MEDIUM [RUNNERS]",
+			"payout_sc": 600,
+			"payout_rc": 2,
+			"xp": 260,
+			"kills_required": 35,
+			"is_night": false,
+		},
+	],
+	3: [
+		{
+			"id": "s3_purge",
+			"job": "kill_quota",
+			"title": "SECTOR 03: BLACKOUT SILO PURGE",
+			"desc": "Night Operations mandatory. Restore power to emergency generators using gun torch, purge Crimson Boss, extract via flare.",
+			"type": "TYPE: NIGHT PURGE",
+			"threat": "THREAT: SEVERE [NIGHT OPS]",
+			"payout_sc": 950,
+			"payout_rc": 3,
+			"xp": 450,
+			"kills_required": 45,
+			"is_night": true,
+		},
+	],
+	4: [
+		{
+			"id": "s4_harvest",
+			"job": "kill_quota",
+			"title": "SECTOR 04: CRIMSON BIO-COMPLEX",
+			"desc": "Infiltrate deep containment lab. Plant centrifuge extractors on biomass nodes, defend against 3-wave containment breach, harvest cores.",
+			"type": "TYPE: BIO-LAB HARVEST",
+			"threat": "THREAT: CRITICAL [BOSS BREACH]",
+			"payout_sc": 1500,
+			"payout_rc": 6,
+			"xp": 700,
+			"kills_required": 60,
+			"is_night": false,
+		},
+	],
 }
 
 ## Per-kill bounty (SC, unbanked until extraction) and XP.
@@ -227,13 +257,26 @@ func spend_research_cores(amount: int) -> bool:
 
 
 # ─── In-Run Loot & Combat Tracking ─────────────────────────────────────────────
-func get_contract(sector_id: int) -> Dictionary:
+func get_contracts(sector_id: int) -> Array:
 	return CONTRACTS.get(sector_id, CONTRACTS[1])
 
 
+func get_contract(sector_id: int, index: int = 0) -> Dictionary:
+	var list := get_contracts(sector_id)
+	return list[clampi(index, 0, list.size() - 1)]
+
+
+## The contract being played: whatever the Command Board deployed, or the sector's
+## first contract when main.tscn is launched directly from the editor.
+func get_active_contract() -> Dictionary:
+	if not current_contract.is_empty():
+		return current_contract
+	return get_contract(current_sector)
+
+
 ## Contract SC payout after the Comms Array bonus (what the board should advertise).
-func get_contract_payout_sc(sector_id: int) -> int:
-	var base: int = get_contract(sector_id)["payout_sc"]
+func get_contract_payout_sc(contract: Dictionary) -> int:
+	var base: int = contract["payout_sc"]
 	var mult := 1.0 + COMMS_PAYOUT_BONUS_PER_TIER * float(get_outpost_level("comms_array"))
 	return int(round(float(base) * mult))
 
@@ -321,10 +364,10 @@ func complete_mission() -> Dictionary:
 	run_active = false
 
 	var sector := current_sector
-	var contract := get_contract(sector)
+	var contract := get_active_contract()
 	var first_clear := not is_sector_cleared(sector)
 	var mult := FIRST_CLEAR_MULTIPLIER if first_clear else 1
-	var contract_sc := get_contract_payout_sc(sector) * mult
+	var contract_sc := get_contract_payout_sc(contract) * mult
 	var contract_rc: int = contract["payout_rc"]
 	var contract_xp: int = int(contract["xp"]) * mult
 
@@ -381,7 +424,7 @@ func _base_summary(success: bool) -> Dictionary:
 	return {
 		"success": success,
 		"sector": current_sector,
-		"title": get_contract(current_sector)["title"],
+		"title": get_active_contract()["title"],
 		"kills": in_run_kills.duplicate(),
 		"kill_count": get_run_kill_count(),
 	}

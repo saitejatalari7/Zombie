@@ -84,6 +84,8 @@ var current_tab: Tab = Tab.COMMAND_BOARD
 
 # ─── State ─────────────────────────────────────────────────────────────────────
 var selected_sector: int = 1
+var selected_contract_index: int = 0
+var next_contract_btn: Button = null
 var selected_weapon: String = "assault_carbine"
 var _weapon_models: Dictionary = {}
 var _active_weapon_mesh: Node3D = null
@@ -259,26 +261,39 @@ func _on_xp_changed(current: int, req: int) -> void:
 
 
 # ─── Command Board (Sectors & Deploy) ─────────────────────────────────────────
-func select_sector(sector_id: int) -> void:
+func select_sector(sector_id: int, contract_index: int = 0) -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	var max_sec: int = gm.highest_sector_unlocked if gm else 1
 	if sector_id > max_sec:
 		return  # Locked
 	
 	selected_sector = sector_id
+	selected_contract_index = contract_index
 	
 	# Contract dossier comes from GameManager so advertised reward == actual payout
 	if gm:
-		var c: Dictionary = gm.get_contract(sector_id)
+		var contracts: Array = gm.get_contracts(sector_id)
+		selected_contract_index = clampi(contract_index, 0, contracts.size() - 1)
+		var c: Dictionary = contracts[selected_contract_index]
 		contract_title.text = c["title"]
-		contract_desc.text = "%s\n\nOBJECTIVE: Eliminate %d hostiles, then reach the extraction LZ." % [c["desc"], c["kills_required"]]
+		var objective: String
+		match c.get("job", "kill_quota"):
+			"asset_recovery":
+				objective = "Recover the flight recorder, then reach the extraction LZ."
+			_:
+				objective = "Eliminate %d hostiles, then reach the extraction LZ." % c["kills_required"]
+		contract_desc.text = "%s\n\nOBJECTIVE: %s" % [c["desc"], objective]
 		contract_type_badge.text = c["type"]
 		contract_threat_label.text = c["threat"]
-		var sc_text := "+%d SC" % gm.get_contract_payout_sc(sector_id)
+		var sc_text := "+%d SC" % gm.get_contract_payout_sc(c)
 		if not gm.is_sector_cleared(sector_id):
 			sc_text += " (FIRST CLEAR x2)"
 		contract_reward_sc.text = sc_text
 		contract_reward_rc.text = "+%d RC" % c["payout_rc"]
+		
+		if next_contract_btn:
+			next_contract_btn.visible = contracts.size() > 1
+			next_contract_btn.text = "CONTRACT %d / %d   ▸ NEXT" % [selected_contract_index + 1, contracts.size()]
 
 	_refresh_sector_locks()
 
@@ -308,7 +323,7 @@ func _on_deploy_pressed() -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	if gm:
 		gm.current_sector = selected_sector
-		gm.current_contract = gm.get_contract(selected_sector).duplicate()
+		gm.current_contract = gm.get_contract(selected_sector, selected_contract_index).duplicate()
 		gm.current_contract["sector"] = selected_sector
 	
 	var dnm = get_node_or_null("/root/DayNightManager")
@@ -587,7 +602,7 @@ func _on_upgrade_outpost_facility(facility: String) -> void:
 
 func _on_outpost_upgraded(_fac: String, _lv: int) -> void:
 	_refresh_base_upgrades()
-	select_sector(selected_sector)
+	select_sector(selected_sector, selected_contract_index)
 
 
 # ─── Responsive Layout (Portrait vs Landscape) ────────────────────────────────
@@ -658,6 +673,20 @@ func _connect_command_board() -> void:
 	sector_3_btn.pressed.connect(func(): select_sector(3))
 	sector_4_btn.pressed.connect(func(): select_sector(4))
 	deploy_btn.pressed.connect(_on_deploy_pressed)
+	
+	# Cycle between the sector's contracts (inserted above the Deploy button)
+	next_contract_btn = Button.new()
+	next_contract_btn.name = "NextContractBtn"
+	next_contract_btn.custom_minimum_size = Vector2(0, 40)
+	next_contract_btn.add_theme_font_size_override("font_size", 14)
+	next_contract_btn.pressed.connect(func(): select_sector(selected_sector, selected_contract_index + 1 if selected_contract_index + 1 < _contract_count() else 0))
+	deploy_btn.get_parent().add_child(next_contract_btn)
+	deploy_btn.get_parent().move_child(next_contract_btn, deploy_btn.get_index())
+
+
+func _contract_count() -> int:
+	var gm = get_node_or_null("/root/GameManager")
+	return gm.get_contracts(selected_sector).size() if gm else 1
 
 
 func _connect_armory() -> void:
