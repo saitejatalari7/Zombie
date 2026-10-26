@@ -18,3 +18,7 @@ data_*/
 Thumbs.db
 .vscode/
 .idea/
+
+# Python (design tools)
+__pycache__/
+*.pyc

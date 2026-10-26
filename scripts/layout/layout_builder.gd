@@ -11,6 +11,10 @@ class_name LayoutBuilder
 const RAIL_HEIGHT := 0.8
 const BLOCKER_HEIGHT := 2.2
 const STAIR_STEPS := 16
+const WALL_T := 0.3           # room wall thickness (matches tools/level_design/sector1_plan.py)
+const ROOF_T := 0.25
+const CUTAWAY_STUB := 0.6     # camera-side walls keep this much when faded
+const DOOR_HEIGHT := 2.4      # lintel fills the doorway above this
 
 const PROP_SCENES := {
 	"car_a": "res://assets/models/props/wrecked_car_a.glb",
@@ -54,6 +58,8 @@ func _build(plan: Dictionary, root: Node3D) -> void:
 		_build_block(b)
 	for seg in plan.get("barriers", []):
 		_build_barrier(seg)
+	for r in plan.get("rooms", []):
+		_build_room(r)
 	_commit_meshes()
 	_build_props(plan.get("props", []))
 	_build_markers(plan.get("markers", {}), plan.get("marker_names", {}))
@@ -74,6 +80,7 @@ func _init_materials() -> void:
 	_materials["sandbag"] = _color_mat(Color(0.64, 0.62, 0.57), 0.95)
 	_materials["rail"] = _color_mat(Color(0.30, 0.31, 0.35), 0.6)
 	_materials["stripe"] = _color_mat(Color(0.72, 0.0, 0.04), 0.5)
+	_materials["interior"] = _color_mat(Color(0.70, 0.70, 0.73))
 
 
 func _color_mat(color: Color, roughness: float = 0.85) -> StandardMaterial3D:
@@ -246,6 +253,124 @@ func _window_bands(x0: float, x1: float, z0: float, z1: float, base: float, top:
 		_box("window", Vector3(0.08, 1.1, d * 0.86), Vector3(x0, y, (z0 + z1) * 0.5))
 		_box("window", Vector3(0.08, 1.1, d * 0.86), Vector3(x1, y, (z0 + z1) * 0.5))
 		y += 3.0
+
+
+# ─── Enterable rooms ──────────────────────────────────────────────────────────
+## Walls with door gaps, a roof, and an interior volume. Far (north/west) walls are
+## merged static geometry; the roof and the upper part of the near (south/east)
+## walls are separate meshes that RoomCutaway fades out while the player is inside.
+func _build_room(r: Dictionary) -> void:
+	var room_name: String = r["name"]
+	var x0: float = r["x0"]
+	var x1: float = r["x1"]
+	var z0: float = r["z0"]
+	var z1: float = r["z1"]
+	var base: float = r["base"]
+	var h: float = r["height"]
+	var doors: Array = r.get("doors", [])
+	var room := RoomCutaway.new()
+	room.name = "Room_" + room_name
+	_root.add_child(room)
+	var pieces: Array[GeometryInstance3D] = []
+	
+	# Interior floor
+	_box("interior", Vector3(x1 - x0 - WALL_T * 2.0, 0.03, z1 - z0 - WALL_T * 2.0),
+		Vector3((x0 + x1) * 0.5, base - 0.01, (z0 + z1) * 0.5))
+	
+	var walls := {
+		"north": [x0, x1, z0, z0 + WALL_T, "x"],
+		"south": [x0, x1, z1 - WALL_T, z1, "x"],
+		"west": [x0, x0 + WALL_T, z0 + WALL_T, z1 - WALL_T, "z"],
+		"east": [x1 - WALL_T, x1, z0 + WALL_T, z1 - WALL_T, "z"],
+	}
+	for side in walls:
+		var w: Array = walls[side]
+		var axis: String = w[4]
+		var spans: Array = [[w[0], w[1]]] if axis == "x" else [[w[2], w[3]]]
+		var gaps: Array = []
+		for d in doors:
+			if String(d["side"]) != side:
+				continue
+			var g0: float = float(d["at"]) - float(d["width"]) * 0.5
+			var g1: float = float(d["at"]) + float(d["width"]) * 0.5
+			gaps.append([g0, g1])
+			var cut: Array = []
+			for sp in spans:
+				if minf(sp[1], g0) - sp[0] > 0.01:
+					cut.append([sp[0], minf(sp[1], g0)])
+				if sp[1] - maxf(sp[0], g1) > 0.01:
+					cut.append([maxf(sp[0], g1), sp[1]])
+			spans = cut
+		var near_side := side == "south" or side == "east"
+		for sp in spans:
+			_room_wall(room, pieces, w, axis, sp[0], sp[1], base, base + h, near_side, true)
+		for g in gaps:  # lintel above each doorway
+			_room_wall(room, pieces, w, axis, g[0], g[1], base + DOOR_HEIGHT, base + h, near_side, false)
+	
+	# Roof slab and parapet: always part of the cutaway
+	var cx := (x0 + x1) * 0.5
+	var cz := (z0 + z1) * 0.5
+	var top := base + h
+	pieces.append(_piece(room, "clay", Vector3(x1 - x0, ROOF_T, z1 - z0), Vector3(cx, top + ROOF_T * 0.5, cz)))
+	var ph := 0.4
+	var py := top + ROOF_T + ph * 0.5
+	pieces.append(_piece(room, "clay", Vector3(x1 - x0, ph, 0.25), Vector3(cx, py, z0 + 0.125)))
+	pieces.append(_piece(room, "clay", Vector3(x1 - x0, ph, 0.25), Vector3(cx, py, z1 - 0.125)))
+	pieces.append(_piece(room, "clay", Vector3(0.25, ph, z1 - z0 - 0.5), Vector3(x0 + 0.125, py, cz)))
+	pieces.append(_piece(room, "clay", Vector3(0.25, ph, z1 - z0 - 0.5), Vector3(x1 - 0.125, py, cz)))
+	
+	# Interior volume (the whole footprint, so standing in the doorway already counts)
+	var volume := Area3D.new()
+	volume.name = "Volume"
+	volume.collision_layer = 0
+	volume.collision_mask = 2  # player (zombies share the layer; RoomCutaway ignores them)
+	var col := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(x1 - x0, h, z1 - z0)
+	col.shape = shape
+	col.position = Vector3(cx, base + h * 0.5, cz)
+	volume.add_child(col)
+	room.add_child(volume)
+	room.setup(volume, pieces)
+
+
+## One wall run between a0..a1 along its axis, from y0 to y1. Far walls are merged
+## static geometry. Near (camera-side) walls fade; with_stub keeps a knee-high
+## static stub at floor level so the room still reads as a room from inside.
+func _room_wall(room: Node3D, pieces: Array[GeometryInstance3D], w: Array, axis: String,
+		a0: float, a1: float, y0: float, y1: float, near_side: bool, with_stub: bool) -> void:
+	var size: Vector3
+	var cx: float
+	var cz: float
+	if axis == "x":
+		size = Vector3(a1 - a0, y1 - y0, float(w[3]) - float(w[2]))
+		cx = (a0 + a1) * 0.5
+		cz = (float(w[2]) + float(w[3])) * 0.5
+	else:
+		size = Vector3(float(w[1]) - float(w[0]), y1 - y0, a1 - a0)
+		cx = (float(w[0]) + float(w[1])) * 0.5
+		cz = (a0 + a1) * 0.5
+	_collider(size, Vector3(cx, (y0 + y1) * 0.5, cz))
+	if not near_side:
+		_box("clay", size, Vector3(cx, (y0 + y1) * 0.5, cz))
+		return
+	var fade_from := y0
+	if with_stub and size.y > CUTAWAY_STUB:
+		_box("clay", Vector3(size.x, CUTAWAY_STUB, size.z), Vector3(cx, y0 + CUTAWAY_STUB * 0.5, cz))
+		fade_from = y0 + CUTAWAY_STUB
+	pieces.append(_piece(room, "clay", Vector3(size.x, y1 - fade_from, size.z), Vector3(cx, (fade_from + y1) * 0.5, cz)))
+
+
+## A separate (non-merged) box mesh, used for parts that fade.
+func _piece(parent: Node3D, mat_key: String, size: Vector3, center: Vector3) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = size
+	mi.mesh = bm
+	mi.material_override = _materials[mat_key]
+	mi.position = center
+	parent.add_child(mi)
+	return mi
 
 
 # ─── Barriers: railings at drop-offs, invisible blockers on top of low walls ──

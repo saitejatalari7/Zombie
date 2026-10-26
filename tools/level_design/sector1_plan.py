@@ -40,7 +40,6 @@ STAIRS = [
 BLOCKS = [
     # West side of the avenue (far side → can be tall)
     ("WestRowSouth_Low",  -24, -5, 14, 18, 0.0, 2.6, "shed"),
-    ("WestRowSouth",      -24, -5, 18, 26, 0.0, 9.0, "building"),
     ("WestLaneGarden",    -13,-10, -12,  0, 0.0, 1.0, "wall"),
     ("WestRowNorth",      -10, -5,-12,  0, 0.0, 10.0, "building"),
     ("WestBack",          -30,-18,-12, 14, 0.0, 12.0, "building"),
@@ -72,12 +71,69 @@ BLOCKS = [
     # Terrace (far north: backdrop can be tall on the north/west)
     ("BlastGateWall",     -24, 16, -56,-52, TERRACE_Y, 5.0, "wall"),
     ("TerraceWestTower",  -30,-24, -56,-20, TERRACE_Y, 14.0, "building"),
-    ("TerraceDepot",      -24,-16, -52,-44, TERRACE_Y, 6.0, "building"),
     ("TerraceRail",        12, 13.5, -52,-20, TERRACE_Y, 1.0, "wall"),
     ("TerraceContainers", 13.5, 16, -48,-24, TERRACE_Y, 5.2, "containers"),
     ("CoverSandbagsW",    -12,-9, -40,-39, TERRACE_Y, 1.0, "cover"),
     ("CoverSandbagsE",      7, 10, -36,-35, TERRACE_Y, 1.0, "cover"),
 ]
+# ── Enterable rooms: (name, x0, x1, z0, z1, base_y, wall_height, doors) ─────────
+# doors: (side, centre along that wall, width). When the player is inside, the roof
+# and the south/east (camera-side) walls fade out, so a room never hides its occupant.
+ROOMS = [
+    ("Clinic", -24, -5, 18, 26, 0.0, 3.6, [("east", 22.0, 2.4)]),
+    ("Depot", -24, -16, -52, -44, TERRACE_Y, 3.6, [("south", -20.0, 2.4)]),
+]
+WALL_T = 0.3
+ROOF_T = 0.65  # roof slab + parapet
+
+
+def expand_rooms(rooms):
+    """Rooms -> (solid parts tagged with the room name, walkable floors). Mirrors LayoutBuilder._build_room."""
+    parts, floors = [], []
+    for name, x0, x1, z0, z1, base, h, doors in rooms:
+        walls = {
+            "north": (x0, x1, z0, z0 + WALL_T, "x"),
+            "south": (x0, x1, z1 - WALL_T, z1, "x"),
+            "west": (x0, x0 + WALL_T, z0 + WALL_T, z1 - WALL_T, "z"),
+            "east": (x1 - WALL_T, x1, z0 + WALL_T, z1 - WALL_T, "z"),
+        }
+        for side, (a0, a1, c0, c1, axis) in walls.items():
+            spans = [(a0, a1)] if axis == "x" else [(c0, c1)]
+            for dside, at, width in doors:
+                if dside != side:
+                    continue
+                g0, g1 = at - width / 2, at + width / 2
+                spans = [piece for lo, hi in spans for piece in ((lo, min(hi, g0)), (max(lo, g1), hi)) if piece[1] - piece[0] > 0.01]
+                if axis == "x":
+                    floors.append((f"{name}Door", g0, g1, c0, c1, base))
+                else:
+                    floors.append((f"{name}Door", a0, a1, g0, g1, base))
+            for i, (lo, hi) in enumerate(spans):
+                if axis == "x":
+                    parts.append((f"{name}:{side}{i}", lo, hi, c0, c1, base, h, "roomwall"))
+                else:
+                    parts.append((f"{name}:{side}{i}", a0, a1, lo, hi, base, h, "roomwall"))
+        parts.append((f"{name}:roof", x0, x1, z0, z1, base + h, ROOF_T, "roof"))
+        floors.append((f"{name}Interior", x0 + WALL_T, x1 - WALL_T, z0 + WALL_T, z1 - WALL_T, base))
+    return parts, floors
+
+
+ROOM_PARTS, ROOM_FLOORS = expand_rooms(ROOMS)
+FLOORS = FLOORS + ROOM_FLOORS
+
+
+def all_blocks():
+    return BLOCKS + ROOM_PARTS
+
+
+def room_of(x, z):
+    """Room whose footprint (doorways included) contains (x, z): its cutaway is active there."""
+    for name, x0, x1, z0, z1, *_ in ROOMS:
+        if x0 <= x < x1 and z0 <= z < z1:
+            return name
+    return None
+
+
 # Props: (type, x, y, z, yaw_degrees). Low clutter only; the builder gives each a fitted box collider.
 PROPS = [
     ("car_a", -1.6, 0, 12, 25), ("car_b", 2.0, 0, 9, -150), ("car_c", -2.2, 0, -3, 200), ("car_a", 1.8, 0, -7, 30),
@@ -96,6 +152,10 @@ MARKERS = {
     "OpeningMob":     [(-1.5, 0.3, 6), (1.5, 0.3, 4), (0, 0.3, 2), (-2, 0.3, 0), (2, 0.3, -2)],
     "PickupSpawns":   [(-12, 0.3, 6), (11, 0.3, 20), (8, TERRACE_Y + 0.3, -30)],
     "BloodDecor":     [(1.5, 0.05, 8), (-2.0, 0.05, -2), (3.0, 0.05, 20)],
+    # Story step locations (contracts reference them by name)
+    "StepMarkers":    [(-15.5, 0.0, 9.0), (-20.0, TERRACE_Y, -48.5), (-14.0, 0.0, 22.0), (22.0, 0.3, 2.0)],
+    # Optional intel documents (lore + research cores)
+    "IntelSpots":     [(-21.0, 0.3, 24.5), (25.0, 0.3, 25.0), (9.0, TERRACE_Y + 0.3, -50.0)],
 }
 # Marker names. The zombie spawner treats names containing "door", "terrace", "bay" etc.
 # (or markers above 1.2 m) as building spawns; the last OpeningMob marker is a runner.
@@ -106,6 +166,8 @@ MARKER_NAMES = {
     "ObjectiveSpawns": ["EastAlley", "ParkingLot", "TerraceDepot"],
     "PickupSpawns": ["PlazaPickup", "ParkingPickup", "TerracePickup"],
     "BloodDecor": ["Pool1", "Pool2", "Pool3"],
+    "StepMarkers": ["NestWestPlaza", "DepotFuse", "ClinicKeycard", "RecorderCase"],
+    "IntelSpots": ["IntelClinic", "IntelParking", "IntelTerrace"],
 }
 SECTOR = {"id": 1, "name": "SECTOR 01: QUARANTINE BLOCK", "bounds": [-30, -56, 60, 94]}
 
@@ -123,9 +185,10 @@ def walk_height(x, z):
 
 
 def blocked(x, z, y):
-    for b in BLOCKS:
+    """Is a standing player (y .. y+1.8) inside a solid here? Roofs overhead don't count."""
+    for b in all_blocks():
         _, x0, x1, z0, z1, by, h, _ = b
-        if x0 <= x < x1 and z0 <= z < z1 and by + h > y + 0.05:
+        if x0 <= x < x1 and z0 <= z < z1 and by + h > y + 0.05 and by < y + 1.8:
             return True
     return False
 
@@ -196,7 +259,7 @@ def check_reachability(cells):
                 dist[n] = dist[c] + CELL
                 q.append(n)
     out = {"reachable_share": f"{len(dist) / len(idx):.1%}"}
-    for group in ("ExtractionZone", "ObjectiveSpawns", "ZombieSpawners", "PickupSpawns"):
+    for group in ("ExtractionZone", "ObjectiveSpawns", "ZombieSpawners", "PickupSpawns", "StepMarkers", "IntelSpots"):
         for i, (x, y, z) in enumerate(MARKERS[group]):
             k = key(x, z)
             if k not in idx:
@@ -209,7 +272,7 @@ def check_reachability(cells):
 
 def solid_top(x, z):
     top = None
-    for b in BLOCKS:
+    for b in all_blocks():
         _, x0, x1, z0, z1, by, h, _ = b
         if x0 <= x < x1 and z0 <= z < z1:
             top = by + h if top is None else max(top, by + h)
@@ -274,7 +337,9 @@ def compute_barriers(cells, blocks):
 
 def export_gdscript(data, path):
     """Write the plan as a GDScript constant so it ships in every export (JSON files don't by default)."""
-    game = {k: data[k] for k in ("sector", "floors", "stairs", "blocks", "barriers", "props", "markers", "marker_names")}
+    game = {k: data[k] for k in ("sector", "floors", "stairs", "blocks", "rooms", "barriers", "props", "markers", "marker_names")}
+    # Room interiors and door thresholds are built by LayoutBuilder._build_room, not as plain floors
+    game["floors"] = [f for f in game["floors"] if not any(f["name"].startswith(r["name"]) for r in game["rooms"])]
     body = json.dumps(game, indent="\t")
     with open(path, "w") as f:
         f.write("extends RefCounted\n")
@@ -307,10 +372,13 @@ def main():
             report.append(f"  capped {name:20s} {target:5.1f} m -> {h:4.1f} m   (would hide: {', '.join(sorted(culprits))})")
     # Final verification with the capped heights
     final = [(b["name"], b["x0"], b["x1"], b["z0"], b["z1"], b["base"], b["height"], b["kind"]) for b in out_blocks]
+    final += ROOM_PARTS
     hidden = 0
     for x, y, z in cells:
         p = np.array([x, y + TORSO, z])
-        if any(ray_hits_block(p, fb, fb[6]) for fb in final if fb[7] != "retaining"):
+        own = room_of(x, z)
+        if any(ray_hits_block(p, fb, fb[6]) for fb in final
+               if fb[7] != "retaining" and not (own and fb[0].startswith(own + ":"))):
             hidden += 1
     reach = check_reachability(cells)
     barriers = compute_barriers(cells, out_blocks)
@@ -325,6 +393,9 @@ def main():
         floors=[dict(name=n, x0=a, x1=b, z0=c, z1=d, y=y) for n, a, b, c, d, y in FLOORS],
         stairs=[dict(name=n, x0=a, x1=b, z0=c, z1=d, y0=y0, y1=y1) for n, a, b, c, d, y0, y1 in STAIRS],
         sector=SECTOR, blocks=out_blocks, markers=MARKERS, marker_names=MARKER_NAMES, barriers=barriers,
+        rooms=[dict(name=n, x0=a, x1=b, z0=c, z1=d, base=y, height=h,
+                    doors=[dict(side=ds, at=at, width=w) for ds, at, w in doors])
+               for n, a, b, c, d, y, h, doors in ROOMS],
         props=[dict(type=t, pos=[x, y, z], yaw=r) for t, x, y, z, r in PROPS],
         stats=dict(walkable_cells=len(cells), walkable_m2=len(cells) * CELL * CELL, hidden_cells=hidden, reach=reach),
     )

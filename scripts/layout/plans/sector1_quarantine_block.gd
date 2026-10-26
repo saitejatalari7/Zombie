@@ -137,17 +137,6 @@ const PLAN := {
 			"kind": "shed"
 		},
 		{
-			"name": "WestRowSouth",
-			"x0": -24,
-			"x1": -5,
-			"z0": 18,
-			"z1": 26,
-			"base": 0.0,
-			"height": 6.9,
-			"target": 9.0,
-			"kind": "building"
-		},
-		{
 			"name": "WestLaneGarden",
 			"x0": -13,
 			"x1": -10,
@@ -434,17 +423,6 @@ const PLAN := {
 			"kind": "building"
 		},
 		{
-			"name": "TerraceDepot",
-			"x0": -24,
-			"x1": -16,
-			"z0": -52,
-			"z1": -44,
-			"base": 3.2,
-			"height": 6.0,
-			"target": 6.0,
-			"kind": "building"
-		},
-		{
 			"name": "TerraceRail",
 			"x0": 12,
 			"x1": 13.5,
@@ -487,6 +465,40 @@ const PLAN := {
 			"height": 1.0,
 			"target": 1.0,
 			"kind": "cover"
+		}
+	],
+	"rooms": [
+		{
+			"name": "Clinic",
+			"x0": -24,
+			"x1": -5,
+			"z0": 18,
+			"z1": 26,
+			"base": 0.0,
+			"height": 3.6,
+			"doors": [
+				{
+					"side": "east",
+					"at": 22.0,
+					"width": 2.4
+				}
+			]
+		},
+		{
+			"name": "Depot",
+			"x0": -24,
+			"x1": -16,
+			"z0": -52,
+			"z1": -44,
+			"base": 3.2,
+			"height": 3.6,
+			"doors": [
+				{
+					"side": "south",
+					"at": -20.0,
+					"width": 2.4
+				}
+			]
 		}
 	],
 	"barriers": [
@@ -1428,6 +1440,45 @@ const PLAN := {
 				0.05,
 				20
 			]
+		],
+		"StepMarkers": [
+			[
+				-15.5,
+				0.0,
+				9.0
+			],
+			[
+				-20.0,
+				3.2,
+				-48.5
+			],
+			[
+				-14.0,
+				0.0,
+				22.0
+			],
+			[
+				22.0,
+				0.3,
+				2.0
+			]
+		],
+		"IntelSpots": [
+			[
+				-21.0,
+				0.3,
+				24.5
+			],
+			[
+				25.0,
+				0.3,
+				25.0
+			],
+			[
+				9.0,
+				3.5,
+				-50.0
+			]
 		]
 	},
 	"marker_names": {
@@ -1461,6 +1512,17 @@ const PLAN := {
 			"Pool1",
 			"Pool2",
 			"Pool3"
+		],
+		"StepMarkers": [
+			"NestWestPlaza",
+			"DepotFuse",
+			"ClinicKeycard",
+			"RecorderCase"
+		],
+		"IntelSpots": [
+			"IntelClinic",
+			"IntelParking",
+			"IntelTerrace"
 		]
 	}
 }
