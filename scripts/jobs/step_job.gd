@@ -9,12 +9,15 @@ class_name StepJob
 ##   defend  — {marker, seconds}: hold a wide zone while the bar fills; the horde surges
 ##   destroy — {marker}: destroy an InfestationNest that keeps spawning zombies
 ##   carry   — {marker}: pick up the flight-recorder case (slows you, runners hunt you)
+##   hunt    — {marker, health}: a Crimson Brute (oversized heavy) waits there; kill it
 ## Markers are children of the sector's "StepMarkers" node, looked up by name.
 
 const STEP_COLOR := Color(1.0, 0.72, 0.0)
 const SEARCH_RADIUS := 2.2
 const DEFEND_RADIUS := 6.0
 const CASE_SCENE := preload("res://scenes/objective_case.tscn")
+const BRUTE_SCENE := preload("res://scenes/zombie_tank.tscn")
+const BRUTE_SCALE := 1.45
 
 var steps: Array = []
 var index: int = -1
@@ -76,6 +79,30 @@ func _next_step() -> void:
 			case_node.case_secured.connect(func(_p: Player): _on_step_object_done())
 			case_node.add_child(make_beacon(Color(STEP_COLOR, 0.3), 1.6))
 			_step_node = case_node
+		"hunt":
+			var brute: Zombie = BRUTE_SCENE.instantiate()
+			brute.name = "CrimsonBrute"
+			brute.max_health = float(step.get("health", 9000.0))
+			brute.attack_damage = 34.0
+			brute.stagger_duration = 0.0  # bullets don't stop it; molotovs and distance do
+			brute.base_speed = 1.5
+			brute.aggro_distance = 16.0
+			sector.add_child(brute)
+			brute.global_position = _marker_pos + Vector3(0.0, 0.2, 0.0)
+			var vis := brute.get_node_or_null("Visuals") as Node3D
+			if vis:
+				vis.scale = Vector3.ONE * BRUTE_SCALE
+			# Body matches the bigger model, so point-blank shots spawn outside it and hit
+			var col := brute.get_node_or_null("CollisionShape3D") as CollisionShape3D
+			if col and col.shape is CapsuleShape3D:
+				var cap := (col.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
+				cap.radius *= BRUTE_SCALE
+				cap.height *= BRUTE_SCALE
+				col.shape = cap
+				col.position.y *= BRUTE_SCALE
+			brute.attack_range = 2.3
+			brute.died.connect(_on_brute_died)
+			_step_node = brute
 		"defend":
 			var zone := make_beacon(Color(STEP_COLOR, 0.22), DEFEND_RADIUS)
 			sector.add_child(zone)
@@ -85,6 +112,13 @@ func _next_step() -> void:
 	if step.has("radio"):
 		radio_message.emit(String(step["radio"]))
 	_update_status()
+
+
+func _on_brute_died(brute: Zombie) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if gm and is_instance_valid(brute):
+		gm.record_kill(brute.get_enemy_type())
+	_next_step()
 
 
 func _on_step_object_done() -> void:
@@ -163,7 +197,7 @@ func get_target_position() -> Variant:
 	match String(step.get("type", "")):
 		"kill", "":
 			return null
-		"destroy", "carry":
+		"destroy", "carry", "hunt":
 			if is_instance_valid(_step_node):
 				return _step_node.global_position
 			return null

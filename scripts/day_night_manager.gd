@@ -23,11 +23,13 @@ const DAY_AMBIENT_COLOR := Color(0.60, 0.62, 0.68, 1.0)
 const DAY_AMBIENT_ENERGY := 0.18
 const DAY_BG_COLOR := Color(0.82, 0.84, 0.87, 1.0)
 
-const NIGHT_SUN_COLOR := Color(0.08, 0.10, 0.18, 1.0)
-const NIGHT_SUN_ENERGY := 0.04
-const NIGHT_AMBIENT_COLOR := Color(0.02, 0.02, 0.03, 1.0) # #050507 near-zero
-const NIGHT_AMBIENT_ENERGY := 0.06
-const NIGHT_BG_COLOR := Color(0.02, 0.02, 0.03, 1.0)
+# Moonlight, not blackout: dark and blue, but shapes still read on a phone in daylight.
+# The flashlight and the orange lamp pools do the rest.
+const NIGHT_SUN_COLOR := Color(0.45, 0.55, 0.85, 1.0)
+const NIGHT_SUN_ENERGY := 0.35
+const NIGHT_AMBIENT_COLOR := Color(0.22, 0.27, 0.42, 1.0)
+const NIGHT_AMBIENT_ENERGY := 0.30
+const NIGHT_BG_COLOR := Color(0.05, 0.06, 0.10, 1.0)
 
 ## Daytime look per sector (sun colour/energy/angle, ambient, sky). Sectors not listed use the
 ## DAY_* constants. Each sector reads as a different time of day.

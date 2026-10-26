@@ -347,7 +347,8 @@ func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO) -> void:
 		return
 	
 	current_health -= amount
-	knockback_velocity += impulse
+	# Heavies barely budge: otherwise every hit shoves them out of auto-fire range
+	knockback_velocity += impulse * (0.0 if is_in_group("bosses") else 1.0)
 	last_hit_impulse = impulse
 	
 	# Stagger on hit (bullets deliver stopping power)

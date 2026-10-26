@@ -35,10 +35,12 @@ var _body: StaticBody3D
 var _tools: Dictionary = {}       # material key -> SurfaceTool
 var _materials: Dictionary = {}   # material key -> Material
 var _box_meshes: Dictionary = {}  # size -> BoxMesh (reused for identical sizes)
+var _night: bool = false          # night sectors get working lamps
 
 
-static func build(plan: Dictionary, root: Node3D) -> void:
+static func build(plan: Dictionary, root: Node3D, night: bool = false) -> void:
 	var builder := LayoutBuilder.new()
+	builder._night = night
 	builder._build(plan, root)
 
 
@@ -61,7 +63,7 @@ func _build(plan: Dictionary, root: Node3D) -> void:
 	for r in plan.get("rooms", []):
 		_build_room(r)
 	_commit_meshes()
-	_build_props(plan.get("props", []))
+	_build_props(plan.get("props", []), _night)
 	_build_markers(plan.get("markers", {}), plan.get("marker_names", {}))
 
 
@@ -86,6 +88,8 @@ func _init_materials() -> void:
 	_materials["sleeper"] = _color_mat(Color(0.30, 0.27, 0.25), 0.95)
 	_materials["ballast"] = _color_mat(Color(0.50, 0.49, 0.47), 1.0)
 	_materials["railcar"] = _color_mat(Color(0.62, 0.30, 0.26), 0.75)
+	_materials["crane"] = _color_mat(Color(0.86, 0.58, 0.16), 0.6)
+	_materials["hazard"] = _color_mat(Color(0.12, 0.12, 0.13), 0.6)
 
 
 func _color_mat(color: Color, roughness: float = 0.85) -> StandardMaterial3D:
@@ -248,11 +252,83 @@ func _build_block(b: Dictionary) -> void:
 				var band := Vector3(size.x + 0.06, 0.6, size.z - 0.8) if not long_x else Vector3(size.x - 0.8, 0.6, size.z + 0.06)
 				_box("window", band, Vector3(center.x, base + h * 0.68, center.z))
 			_box("clay", Vector3(size.x - 0.2, 0.12, size.z - 0.2), Vector3(center.x, top + 0.06, center.z))
+		"crane":
+			_crane(x0, x1, z0, z1, base, h)
+			_collider(size, center)
+		"tank":
+			_fuel_tank(x0, x1, z0, z1, base, h)
+			_collider(size, center)
+		"pipes":
+			_pipe_rack(x0, x1, z0, z1, base, h)
+			_collider(size, center)
 		"bridge":
 			# Walkable deck painted over water; the ground collider is the floor
 			_box("paving", Vector3(size.x, 0.05, size.z), Vector3(center.x, top - 0.025, center.z))
 		_:
 			_solid("wall", size, center)
+
+
+## Gantry crane: four legs, a top girder, the operator cab and a hook block.
+func _crane(x0: float, x1: float, z0: float, z1: float, base: float, h: float) -> void:
+	var leg := 1.0
+	var girder := minf(1.4, h * 0.12)
+	var leg_h := h - girder
+	for px: float in [x0 + leg * 0.5, x1 - leg * 0.5]:
+		for pz: float in [z0 + leg * 0.5, z1 - leg * 0.5]:
+			_box("crane", Vector3(leg, leg_h, leg), Vector3(px, base + leg_h * 0.5, pz))
+	_box("crane", Vector3(x1 - x0, girder, z1 - z0), Vector3((x0 + x1) * 0.5, base + h - girder * 0.5, (z0 + z1) * 0.5))
+	_box("crane", Vector3(x1 - x0 - 2.0 * leg, 0.6, 0.8), Vector3((x0 + x1) * 0.5, base + leg_h * 0.45, z0 + leg * 0.5))
+	_box("window", Vector3(2.2, 1.6, 2.0), Vector3(x0 + (x1 - x0) * 0.3, base + leg_h - 0.8, (z0 + z1) * 0.5))
+	_box("hazard", Vector3(1.2, 0.8, 1.2), Vector3((x0 + x1) * 0.55, base + leg_h * 0.6, (z0 + z1) * 0.5))
+
+
+## Fuel tank: a cylinder that fills the footprint, with two dark bands and a cap.
+func _fuel_tank(x0: float, x1: float, z0: float, z1: float, base: float, h: float) -> void:
+	var r := minf(x1 - x0, z1 - z0) * 0.5
+	var c := Vector3((x0 + x1) * 0.5, base, (z0 + z1) * 0.5)
+	_cyl("clay", r, h, c + Vector3(0.0, h * 0.5, 0.0))
+	_cyl("hazard", r + 0.05, 0.4, c + Vector3(0.0, h * 0.33, 0.0))
+	_cyl("hazard", r + 0.05, 0.4, c + Vector3(0.0, h * 0.66, 0.0))
+	_cyl("steel", r * 0.85, 0.3, c + Vector3(0.0, h + 0.15, 0.0))
+
+
+## Pipe rack: low supports with three pipes along the long side.
+func _pipe_rack(x0: float, x1: float, z0: float, z1: float, base: float, h: float) -> void:
+	var along_x := (x1 - x0) >= (z1 - z0)
+	var length := (x1 - x0) if along_x else (z1 - z0)
+	var width := (z1 - z0) if along_x else (x1 - x0)
+	var cx := (x0 + x1) * 0.5
+	var cz := (z0 + z1) * 0.5
+	var p := 0.5
+	while p < length:
+		var support: Vector3 = Vector3(0.3, h, width) if along_x else Vector3(width, h, 0.3)
+		var spos: Vector3 = Vector3(x0 + p, base + h * 0.5, cz) if along_x else Vector3(cx, base + h * 0.5, z0 + p)
+		_box("hazard", support, spos)
+		p += 3.0
+	var pr := minf(0.35, width * 0.16)
+	for i in range(3):
+		var off := (float(i) - 1.0) * width * 0.3
+		var basis := Basis(Vector3.FORWARD, PI * 0.5) if along_x else Basis(Vector3.RIGHT, PI * 0.5)
+		var pos: Vector3 = Vector3(cx, base + h - pr, cz + off) if along_x else Vector3(cx + off, base + h - pr, cz)
+		_cyl("steel", pr, length, pos, basis)
+
+
+## A cylinder merged into the material's mesh (axis along Y unless a basis is given).
+func _cyl(mat_key: String, radius: float, height: float, center: Vector3, basis: Basis = Basis()) -> void:
+	var key := "cyl%.2f,%.2f" % [radius, height]
+	if not _box_meshes.has(key):
+		var cm := CylinderMesh.new()
+		cm.top_radius = radius
+		cm.bottom_radius = radius
+		cm.height = height
+		cm.radial_segments = 16
+		cm.rings = 1
+		_box_meshes[key] = cm
+	if not _tools.has(mat_key):
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		_tools[mat_key] = st
+	(_tools[mat_key] as SurfaceTool).append_from(_box_meshes[key], 0, Transform3D(basis, center))
 
 
 ## Walkable rail track: sleepers every 0.8 m and two rails, laid along the long side.
@@ -445,7 +521,7 @@ func _build_barrier(seg: Dictionary) -> void:
 
 
 # ─── Props ─────────────────────────────────────────────────────────────────────
-func _build_props(props: Array) -> void:
+func _build_props(props: Array, night: bool = false) -> void:
 	var holder := Node3D.new()
 	holder.name = "LayoutProps"  # not "Props": SectorBase would wrap those in convex hulls
 	_root.add_child(holder)
@@ -466,6 +542,15 @@ func _build_props(props: Array) -> void:
 		node.rotation_degrees.y = float(p["yaw"])
 		holder.add_child(node)
 		_add_prop_collider(node, type in THIN_PROPS)
+		if type == "lamp" and night:
+			var lamp := OmniLight3D.new()
+			lamp.name = "LampLight"
+			lamp.position = Vector3(0.6, 4.2, 0.0)
+			lamp.light_color = Color(1.0, 0.68, 0.36)
+			lamp.light_energy = 2.4
+			lamp.omni_range = 9.0
+			lamp.shadow_enabled = false
+			node.add_child(lamp)
 
 
 ## Box collider fitted to the prop's own meshes (or just its trunk for tall thin props).

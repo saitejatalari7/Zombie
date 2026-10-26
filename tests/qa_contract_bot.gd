@@ -101,6 +101,10 @@ func _drive() -> void:
 			"destroy":
 				if is_instance_valid(job._step_node):
 					job._step_node.take_damage(50.0)
+			"hunt":
+				if is_instance_valid(job._step_node):
+					p.global_position = job._step_node.global_position + Vector3(0.0, 0.3, 6.0)
+					job._step_node.take_damage(60.0)
 			"carry":
 				if is_instance_valid(job._step_node):
 					p.global_position = job._step_node.global_position + Vector3(0.0, 0.3, 0.0)

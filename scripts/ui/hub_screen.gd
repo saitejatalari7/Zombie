@@ -15,7 +15,7 @@ const SECTOR_NAMES := {1: "Quarantine Block", 2: "Transit Grid", 3: "Blackout Do
 const SECTOR_TAGLINES := {
 	1: "Where the outbreak started. The medevac went down here, and so did the block.",
 	2: "Someone in the central terminal broadcasts every night at nine. The trains all went one way.",
-	3: "No power, no light. Something big nests in the cranes.",
+	3: "The docks went dark the night the lab ship came in. Something big came off it.",
 	4: "The lab that made Crimson. End it at the source.",
 }
 const TRACK_INFO := {

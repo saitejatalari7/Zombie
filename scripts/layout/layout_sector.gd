@@ -29,7 +29,7 @@ func _enter_tree() -> void:
 	if sec.has("bounds"):
 		var b: Array = sec["bounds"]
 		sector_bounds = Rect2(float(b[0]), float(b[1]), float(b[2]), float(b[3]))
-	LayoutBuilder.build(plan, self)
+	LayoutBuilder.build(plan, self, is_night_sector)
 	if plan.has("nav"):
 		var field := FlowField.new()
 		field.name = "FlowField"

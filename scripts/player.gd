@@ -156,6 +156,8 @@ func _ready() -> void:
 	emit_signal("auto_fire_toggled", auto_fire_enabled)
 	
 	# Initialize Flashlight & DayNightManager connection
+	if torch_light == null:
+		_build_torch()
 	var dnm = get_node_or_null("/root/DayNightManager")
 	if dnm:
 		_on_lighting_mode_changed(dnm.is_night_mode())
@@ -175,6 +177,33 @@ func _ready() -> void:
 		
 	_setup_range_ring()
 	_setup_aim_arrow()
+
+## Weapon flashlight (a cone ahead of the operative) plus a soft glow around them, so the
+## player and anything close stay readable at night. No shadows: cheap on mobile.
+func _build_torch() -> void:
+	var visuals := get_node_or_null("Visuals") as Node3D
+	if visuals == null:
+		return
+	torch_light = SpotLight3D.new()
+	torch_light.name = "TorchLight"
+	torch_light.position = Vector3(0.0, 1.4, -0.3)
+	torch_light.rotation_degrees = Vector3(-18.0, 0.0, 0.0)  # forward (-Z) and a little down
+	torch_light.light_color = Color(1.0, 0.95, 0.82)
+	torch_light.light_energy = 4.0
+	torch_light.spot_range = 18.0
+	torch_light.spot_angle = 34.0
+	torch_light.spot_attenuation = 0.6
+	torch_light.shadow_enabled = false
+	visuals.add_child(torch_light)
+	torch_ambient = OmniLight3D.new()
+	torch_ambient.name = "TorchAmbient"
+	torch_ambient.position = Vector3(0.0, 2.2, 0.0)
+	torch_ambient.light_color = Color(0.85, 0.9, 1.0)
+	torch_ambient.light_energy = 0.9
+	torch_ambient.omni_range = 6.0
+	torch_ambient.shadow_enabled = false
+	add_child(torch_ambient)
+
 
 func _on_lighting_mode_changed(is_night: bool) -> void:
 	if torch_light:

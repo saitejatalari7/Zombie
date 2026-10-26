@@ -87,7 +87,7 @@ func _process(delta: float) -> void:
 
 func spawn_splatter(pos: Vector3, normal: Vector3 = Vector3.UP, scale_mult: float = 1.0, is_puddle: bool = false, is_wall: bool = false) -> Decal:
 	if active_decals.size() >= max_decals:
-		var oldest: Node = active_decals.pop_front()
+		var oldest = active_decals.pop_front()  # untyped: may already be freed (faded out)
 		if is_instance_valid(oldest):
 			oldest.queue_free()
 	
@@ -173,7 +173,7 @@ func spawn_directional_blood(hit_pos: Vector3, shot_dir: Vector3, damage: float 
 ## 6-Meter Massive Blood Crater stamped by Heavy Rocket Launcher / Super Blast
 func spawn_massive_blood_crater(center_pos: Vector3, diameter: float = 6.0) -> void:
 	if active_decals.size() >= max_decals:
-		var oldest: Node = active_decals.pop_front()
+		var oldest = active_decals.pop_front()  # untyped: may already be freed (faded out)
 		if is_instance_valid(oldest):
 			oldest.queue_free()
 			
@@ -198,7 +198,7 @@ func spawn_massive_blood_crater(center_pos: Vector3, diameter: float = 6.0) -> v
 
 func spawn_footprint(pos: Vector3, heading_yaw: float, strength: float) -> void:
 	if active_decals.size() >= max_decals:
-		var oldest: Node = active_decals.pop_front()
+		var oldest = active_decals.pop_front()  # untyped: may already be freed (faded out)
 		if is_instance_valid(oldest):
 			oldest.queue_free()
 	

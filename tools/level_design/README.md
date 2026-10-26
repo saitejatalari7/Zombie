@@ -26,7 +26,9 @@ python3 tools/level_design/build_layouts.py s1_market    # one
 5. **Export**: the plan plus the nav grid, as a GDScript constant (ships in every export).
 
 Block kinds: `building`, `shed`, `wall`, `planter`, `cover`, `containers`, `bus`,
-`retaining` (under a raised floor; never capped), `water` (canal surface), `bridge`.
+`retaining` (under a raised floor; never capped), `water` (canal surface), `bridge`,
+`tracks` (walkable rails), `ballast`, `railcar`, `crane`, `tank` (fuel tank), `pipes` (pipe rack).
+Container stacks keep full height behind pallet strips (see `stack()` in the Sector 03 layouts).
 
 Never edit `scripts/layout/plans/*.gd` by hand.
 

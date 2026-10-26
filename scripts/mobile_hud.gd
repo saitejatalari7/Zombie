@@ -72,6 +72,7 @@ var _run_sc: int = 0
 var _pause_layer: Control = null
 var _abandon_armed: bool = false
 var _abandon_btn: Button = null
+var _top_col: VBoxContainer = null
 
 func _process(delta: float) -> void:
 	# Continuous mouse raycast targeting while special aiming on PC
@@ -431,10 +432,6 @@ func _ensure_radio_panel() -> void:
 	_radio_panel = UIKit.card("AccentCard")
 	_radio_panel.name = "RadioPanel"
 	_radio_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_radio_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_radio_panel.offset_left = UIKit.MARGIN
-	_radio_panel.offset_right = -UIKit.MARGIN
-	_radio_panel.offset_top = 360.0
 	var row := UIKit.hbox(18)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(UIKit.icon("radio", 52, UIKit.AMBER))
@@ -447,8 +444,14 @@ func _ensure_radio_panel() -> void:
 	col.add_child(_radio_text)
 	row.add_child(col)
 	_radio_panel.add_child(row)
-	add_child(_radio_panel)
-	move_child(_radio_panel, 0)
+	if _top_col:
+		_top_col.add_child(_radio_panel)  # flows under the mission line
+	else:
+		_radio_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		_radio_panel.offset_left = UIKit.MARGIN
+		_radio_panel.offset_right = -UIKit.MARGIN
+		_radio_panel.offset_top = 360.0
+		add_child(_radio_panel)
 
 var objective_pointer: ObjectivePointer = null
 
@@ -851,13 +854,24 @@ func _apply_release_ui() -> void:
 	if auto_fire_btn:
 		auto_fire_btn.visible = false
 	
-	# Health + run stats card, top-left
+	# Top column: [stats card ... pause], then the mission line, then radio messages.
+	# A column so a taller stats card (power-up timer) pushes the rest down, not over them.
+	_top_col = UIKit.vbox(16)
+	_top_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_top_col.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_top_col.offset_left = UIKit.MARGIN
+	_top_col.offset_right = -UIKit.MARGIN
+	_top_col.offset_top = UIKit.TOP_SAFE
+	top_bar.add_child(_top_col)
+	var top_row := UIKit.hbox(16)
+	top_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_top_col.add_child(top_row)
+	
+	# Health + run stats card
 	var stats_card := UIKit.card()
 	stats_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stats_card.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	stats_card.offset_left = UIKit.MARGIN
-	stats_card.offset_top = UIKit.TOP_SAFE
-	stats_card.offset_right = UIKit.MARGIN + 560
+	stats_card.custom_minimum_size = Vector2(560, 0)
+	stats_card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var stats_col := UIKit.vbox(10)
 	stats_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stats_card.add_child(stats_col)
@@ -873,7 +887,8 @@ func _apply_release_ui() -> void:
 	health_bar.add_theme_stylebox_override("fill", hb_fill)
 	_stats_label = UIKit.label("", "SubheadLabel", UIKit.TEXT, 34)
 	stats_col.add_child(_stats_label)
-	top_bar.add_child(stats_card)
+	top_row.add_child(stats_card)
+	top_row.add_child(UIKit.expander())
 	
 	# Pause, top-right
 	_pause_btn = Button.new()
@@ -881,15 +896,14 @@ func _apply_release_ui() -> void:
 	_pause_btn.icon = UIKit.icon_texture("pause")
 	_pause_btn.expand_icon = true
 	_pause_btn.focus_mode = Control.FOCUS_NONE
-	_pause_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_pause_btn.offset_left = -UIKit.MARGIN - UIKit.MIN_TOUCH
-	_pause_btn.offset_right = -UIKit.MARGIN
-	_pause_btn.offset_top = UIKit.TOP_SAFE
-	_pause_btn.offset_bottom = UIKit.TOP_SAFE + UIKit.MIN_TOUCH
+	_pause_btn.custom_minimum_size = Vector2(UIKit.MIN_TOUCH, UIKit.MIN_TOUCH)
+	_pause_btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_pause_btn.pressed.connect(toggle_pause)
-	top_bar.add_child(_pause_btn)
+	top_row.add_child(_pause_btn)
 	
 	# Mission line
+	mission_pill.reparent(_top_col, false)
+	mission_pill.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	mission_pill.theme_type_variation = ""
 	mission_pill.remove_theme_stylebox_override("panel")
 	mission_label.label_settings = null
@@ -915,6 +929,12 @@ func _apply_release_ui() -> void:
 			bl.theme_type_variation = "SubheadLabel" if child_name == "Title" else "CaptionLabel"
 			bl.add_theme_color_override("font_color", UIKit.AMBER if child_name == "Title" else UIKit.TEXT_SOFT)
 	
+	# Power-up timer lives inside the stats card (it used to sit behind it)
+	if powerup_widget:
+		powerup_widget.reparent(stats_col, false)
+		powerup_widget.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		powerup_widget.custom_minimum_size = Vector2(480, 72)
+		powerup_widget.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	# Power-up widget text
 	if powerup_title:
 		powerup_title.label_settings = null
