@@ -11,7 +11,7 @@ signal vault_state_changed(can_vault: bool)
 signal auto_fire_toggled(enabled: bool)
 signal died()
 
-@export var move_speed: float = 6.2
+@export var move_speed: float = 5.4
 @export var rifle_fire_rate: float = 0.11
 @export var rifle_damage: float = 34.0
 @export var super_blast_cooldown_time: float = 4.5
@@ -69,6 +69,11 @@ var bonus_knockback: float = 1.0
 var can_vault: bool = false
 var is_vaulting: bool = false
 var vault_target_pos: Vector3 = Vector3.ZERO
+
+# Shoulder Charge: the escape tool when the horde closes in (replaces the old always-on crowd shove)
+const SHOULDER_CHARGE_COOLDOWN := 3.0
+const SHOULDER_CHARGE_RADIUS := 2.2
+var shoulder_charge_timer: float = 0.0
 
 # Mobile/Virtual controls input vector
 var mobile_move_input: Vector2 = Vector2.ZERO
@@ -296,6 +301,9 @@ func _physics_process(delta: float) -> void:
 		if fire_timer <= 0.0:
 			can_fire_rifle = true
 	
+	if shoulder_charge_timer > 0.0:
+		shoulder_charge_timer = maxf(0.0, shoulder_charge_timer - delta)
+	
 	if super_blast_timer > 0.0:
 		super_blast_timer -= delta
 		emit_signal("super_blast_cooldown", super_blast_timer / super_blast_cooldown_time)
@@ -377,24 +385,6 @@ func _physics_process(delta: float) -> void:
 		if distance_since_step >= step_interval:
 			distance_since_step = 0.0
 			_on_step_taken()
-			
-		# Crowd-Pushing Bulldozer Mechanic: Shove zombies away so player can exit horde (fast squared check)
-		var push_radius: float = 1.45
-		var push_radius_sq: float = push_radius * push_radius
-		var p_pos := global_position
-		for z in get_tree().get_nodes_in_group("zombies"):
-			if is_instance_valid(z) and not z.is_dead:
-				var z_pos: Vector3 = (z as Node3D).global_position
-				var dx: float = z_pos.x - p_pos.x
-				var dz: float = z_pos.z - p_pos.z
-				var d_sq: float = dx * dx + dz * dz
-				if d_sq < push_radius_sq and d_sq > 0.0001:
-					var d: float = sqrt(d_sq)
-					var strength: float = (push_radius - d) / push_radius
-					var diff := Vector3(dx, 0.0, dz)
-					var push_dir: Vector3 = (diff / d * 0.7 + move_dir * 0.6).normalized()
-					z.knockback_velocity += push_dir * (strength * 22.0)
-					z.global_position += push_dir * (strength * 0.35)
 	else:
 		# Quick stop - eliminate unwanted sliding
 		velocity.x = move_toward(velocity.x, 0, effective_speed * delta * 25.0)
@@ -481,15 +471,15 @@ func _physics_process(delta: float) -> void:
 	# Check for vault/climb opportunities in front of player
 	_check_vault_opportunity()
 	
-	# Direct collision shoving: push any zombie the player physically bumps into
+	# Light collision nudge so the player isn't glued to a single zombie.
+	# Deliberately weak: escaping a crowd is what the Shoulder Charge is for. Tanks don't budge.
 	for i in range(get_slide_collision_count()):
 		var col := get_slide_collision(i)
 		var collider: Object = col.get_collider()
-		if collider and collider.is_in_group("zombies") and collider.has_method("take_damage"):
+		if collider and collider.is_in_group("zombies") and not collider.is_in_group("bosses") and collider.has_method("take_damage"):
 			var shove_dir := -col.get_normal()
 			shove_dir.y = 0.0
-			collider.knockback_velocity += shove_dir.normalized() * 16.0
-			collider.global_position += shove_dir.normalized() * 0.22
+			collider.knockback_velocity += shove_dir.normalized() * 6.0
 	
 	# Dynamic sector boundary clamp
 	if sector_bounds.size != Vector2.ZERO:
@@ -558,6 +548,35 @@ func trigger_vault() -> bool:
 		emit_signal("vault_state_changed", false)
 	)
 	return true
+
+## Knocks back and staggers every non-tank zombie within reach. Returns false on cooldown.
+func trigger_shoulder_charge() -> bool:
+	if shoulder_charge_timer > 0.0 or is_dead:
+		return false
+	shoulder_charge_timer = SHOULDER_CHARGE_COOLDOWN
+	for z in get_tree().get_nodes_in_group("zombies"):
+		if not is_instance_valid(z) or z.is_dead or z.is_in_group("bosses"):
+			continue
+		var diff: Vector3 = (z as Node3D).global_position - global_position
+		diff.y = 0.0
+		var d := diff.length()
+		if d > SHOULDER_CHARGE_RADIUS or d < 0.001:
+			continue
+		var strength := 1.0 - (d / SHOULDER_CHARGE_RADIUS) * 0.5
+		z.knockback_velocity += (diff / d) * 14.0 * strength
+		z.state = Zombie.State.STAGGER
+		z.stagger_timer = 0.45
+	visual_root.position.y = 0.12
+	var cam := get_viewport().get_camera_3d()
+	if cam and cam.has_method("add_trauma"):
+		cam.add_trauma(0.15)
+	return true
+
+func has_zombie_within(radius: float) -> bool:
+	for z in get_tree().get_nodes_in_group("zombies"):
+		if is_instance_valid(z) and not z.is_dead and global_position.distance_to((z as Node3D).global_position) <= radius:
+			return true
+	return false
 
 func find_densest_zombie_cluster(cluster_radius: float = 4.0, range_dist: float = 16.0) -> Vector3:
 	var zombies := get_tree().get_nodes_in_group("zombies")

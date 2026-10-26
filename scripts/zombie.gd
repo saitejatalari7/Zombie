@@ -13,7 +13,7 @@ enum State {
 }
 
 @export var max_health: float = 65.0
-@export var base_speed: float = 0.6 # Halved per tactical requirement (was 1.2)
+@export var base_speed: float = 1.4
 @export var damage_per_second: float = 0.0
 @export var attack_damage: float = 12.0
 @export var attack_range: float = 1.25
@@ -24,7 +24,7 @@ enum State {
 
 var state: State = State.CHASE
 var current_health: float = 65.0
-var speed: float = 0.6
+var speed: float = 1.4
 var is_dead: bool = false
 var target_player: Player = null
 
@@ -32,6 +32,7 @@ var target_player: Player = null
 var attack_timer: float = 0.0
 var stagger_timer: float = 0.0
 var separation_timer: float = 0.0
+var lunge_cooldown: float = 0.0
 
 # Flocking / Avoidance
 var separation_distance: float = 0.95
@@ -52,7 +53,7 @@ var last_hit_impulse: Vector3 = Vector3.ZERO
 @onready var leg_right: Node3D = $Visuals.find_child("LegRight", true, false) if has_node("Visuals") else null
 
 var walk_cycle: float = 0.0
-var walk_speed_factor: float = 3.5 # Halved cadence to match 0.6m/s speed
+var walk_speed_factor: float = 3.5
 var hit_flash_timer: float = 0.0
 
 # Burning state
@@ -211,6 +212,14 @@ func _process_chase(delta: float, dist_to_player: float) -> void:
 		velocity.z = 0.0
 		return
 	
+	# Runners close the last few metres with a sudden lunge
+	lunge_cooldown = maxf(0.0, lunge_cooldown - delta)
+	if is_in_group("runners") and lunge_cooldown <= 0.0 and dist_to_player < 3.0:
+		var lunge_dir := target_player.global_position - global_position
+		lunge_dir.y = 0.0
+		knockback_velocity += lunge_dir.normalized() * 6.0
+		lunge_cooldown = 2.5
+	
 	# Direction towards player or blood scent
 	var target_pos := target_player.global_position
 	if is_in_group("runners") and BloodManager.instance:
@@ -280,7 +289,8 @@ func _update_animation(delta: float, dist_to_player: float) -> void:
 		
 	var horiz_vel := Vector2(velocity.x, velocity.z).length()
 	if horiz_vel > 0.05:
-		walk_cycle += delta * walk_speed_factor
+		# Stride cadence follows actual speed so fast runners don't moonwalk
+		walk_cycle += delta * walk_speed_factor * clampf(speed / 1.2, 0.8, 2.5)
 		var bob := absf(sin(walk_cycle)) * 0.06
 		visual_root.position.y = bob
 		visual_root.rotation.z = sin(walk_cycle) * 0.04
