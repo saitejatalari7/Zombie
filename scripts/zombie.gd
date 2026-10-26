@@ -380,7 +380,8 @@ func die() -> void:
 	
 	# Splatter thick viscous blood (puddle + spray + 3D droplets)
 	if BloodManager.instance:
-		BloodManager.instance.spawn_thick_viscous_blood(global_position, last_hit_impulse)
+		var pool_scale := 2.0 if is_instance_valid(target_player) and target_player.hemorrhage_rounds else 1.0
+		BloodManager.instance.spawn_thick_viscous_blood(global_position, last_hit_impulse, pool_scale)
 	
 	# Collapse & sink into the ground
 	var tween := create_tween().set_parallel(true)

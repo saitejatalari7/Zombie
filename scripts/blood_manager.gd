@@ -14,6 +14,7 @@ var impact_scene := preload("res://scenes/bullet_impact.tscn")
 var max_decals: int = 50
 var active_decals: Array[Node] = []
 var blood_puddles: Array[Vector3] = []
+var blood_puddle_radii: Array[float] = []  # parallel to blood_puddles: how far each pool reaches
 var active_footprints: Array[Dictionary] = [] # [{ "pos": Vector3, "strength": float, "time": float }]
 
 # Particle Pools (Zero runtime instantiation hitch)
@@ -118,9 +119,7 @@ func spawn_splatter(pos: Vector3, normal: Vector3 = Vector3.UP, scale_mult: floa
 	decal.distance_fade_enabled = false
 	
 	if is_puddle:
-		blood_puddles.append(pos)
-		if blood_puddles.size() > 25:
-			blood_puddles.pop_front()
+		_add_puddle(pos, 1.35 * maxf(1.0, scale_mult / 1.6))
 			
 	return decal
 
@@ -184,7 +183,7 @@ func spawn_massive_blood_crater(center_pos: Vector3, diameter: float = 6.0) -> v
 		decal.setup(diameter, true)
 	active_decals.append(decal)
 	
-	blood_puddles.append(center_pos)
+	_add_puddle(center_pos, diameter * 0.5)
 	
 	# Radial satellite spatters in a 360 degree ring (limited to 8 for max FPS)
 	var count := 8
@@ -228,14 +227,23 @@ func get_nearest_footprint(pos: Vector3, max_dist: float = 14.0) -> Dictionary:
 			best_data = fp
 	return best_data
 
+func _add_puddle(pos: Vector3, radius: float) -> void:
+	blood_puddles.append(pos)
+	blood_puddle_radii.append(radius)
+	if blood_puddles.size() > 25:
+		blood_puddles.pop_front()
+		blood_puddle_radii.pop_front()
+
 func is_stepping_in_blood(pos: Vector3, radius_check: float = 1.35) -> bool:
-	for puddle_pos in blood_puddles:
-		if pos.distance_to(puddle_pos) <= radius_check:
+	for i in range(blood_puddles.size()):
+		var reach := maxf(radius_check, blood_puddle_radii[i]) if i < blood_puddle_radii.size() else radius_check
+		if pos.distance_to(blood_puddles[i]) <= reach:
 			return true
 	return false
 
-func spawn_thick_viscous_blood(pos: Vector3, impulse: Vector3 = Vector3.ZERO) -> void:
-	spawn_splatter(pos, Vector3.UP, 1.6, true)
+## pool_scale > 1 makes a wider death pool (Hemorrhage Rounds).
+func spawn_thick_viscous_blood(pos: Vector3, impulse: Vector3 = Vector3.ZERO, pool_scale: float = 1.0) -> void:
+	spawn_splatter(pos, Vector3.UP, 1.6 * pool_scale, true)
 	spawn_burst(pos + Vector3(0, 0.4, 0))
 	if impulse.length() > 0.5:
 		spawn_directional_blood(pos, impulse.normalized(), 40.0, false)

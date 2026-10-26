@@ -60,6 +60,16 @@ var stim_max: float = 12.0
 var carrying_objective: bool = false
 var objective_speed_mult: float = 1.0
 
+# Operative skills (Crimson Berserker pair)
+const SIPHON_FIRE_RATE_MULT := 0.8   # +25% fire rate (interval x 0.8) in fresh blood
+const BERSERKER_KILLS_PER_MOLOTOV := 6
+var has_blood_siphon: bool = false
+var hemorrhage_rounds: bool = false   # read by Zombie.die() for wider death pools
+var berserker_pair: bool = false
+var in_blood: bool = false
+var _blood_check_timer: float = 0.0
+var _berserker_kills: int = 0
+
 # Armory upgrades dynamic stats
 var base_penetration: int = 1
 var crit_chance: float = 0.0
@@ -155,6 +165,7 @@ func _ready() -> void:
 		if torch_ambient: torch_ambient.visible = false
 	
 	_apply_armory_upgrades()
+	_apply_equipped_skills()
 	
 	# Instantiate reusable muzzle flash
 	if muzzle_point and muzzle_scene:
@@ -283,6 +294,26 @@ func cancel_aim_special() -> void:
 	if aim_arrow_indicator:
 		aim_arrow_indicator.stop_aiming()
 
+func _apply_equipped_skills() -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm:
+		return
+	var eq: Array = gm.get_equipped_skills()
+	has_blood_siphon = "blood_siphon" in eq
+	hemorrhage_rounds = "hemorrhage_rounds" in eq
+	berserker_pair = has_blood_siphon and hemorrhage_rounds
+
+## Called by the spawner for every kill. Crimson Berserker: kills made while standing
+## in blood build towards a free molotov charge.
+func on_zombie_killed() -> void:
+	if not berserker_pair or not in_blood or molotov_ammo >= max_molotov_ammo:
+		return
+	_berserker_kills += 1
+	if _berserker_kills >= BERSERKER_KILLS_PER_MOLOTOV:
+		_berserker_kills = 0
+		refill_molotov(1)
+		emit_signal("powerup_activated", "CRIMSON BERSERKER: +1 MOLOTOV", 0.0)
+
 func _apply_armory_upgrades() -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	if not gm:
@@ -311,6 +342,12 @@ func _physics_process(delta: float) -> void:
 	
 	if shoulder_charge_timer > 0.0:
 		shoulder_charge_timer = maxf(0.0, shoulder_charge_timer - delta)
+	
+	# Blood under the operative (skills); checked a few times a second, not every frame
+	_blood_check_timer -= delta
+	if _blood_check_timer <= 0.0:
+		_blood_check_timer = 0.15
+		in_blood = BloodManager.instance != null and BloodManager.instance.is_stepping_in_blood(global_position)
 	
 	if super_blast_timer > 0.0:
 		super_blast_timer -= delta
@@ -687,6 +724,8 @@ func jump() -> void:
 func fire_rifle(_primary_target: Node3D = null) -> void:
 	can_fire_rifle = false
 	var effective_fire_rate: float = rifle_fire_rate * (0.5 if is_hyper_burst else (0.75 if is_stim_active else 1.0))
+	if has_blood_siphon and in_blood:
+		effective_fire_rate *= SIPHON_FIRE_RATE_MULT
 	fire_timer = effective_fire_rate
 	
 	# Reusable Muzzle flash

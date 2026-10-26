@@ -155,6 +155,8 @@ func _on_zombie_died(_zombie: Zombie) -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	if gm and is_instance_valid(_zombie):
 		gm.record_kill(_zombie.get_enemy_type())
+	if is_instance_valid(player):
+		player.on_zombie_killed()
 	
 	# 10% chance to drop Molotov Power-Up on zombie death
 	if randf() < 0.10 and is_instance_valid(_zombie):

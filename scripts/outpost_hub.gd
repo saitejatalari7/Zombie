@@ -501,7 +501,7 @@ func _refresh_skills_ui() -> void:
 	if active_synergy_banner:
 		if pair_set.has("blood_siphon") and pair_set.has("hemorrhage_rounds"):
 			active_synergy_banner.visible = true
-			synergy_bonus_label.text = "⚡ CRIMSON BERSERKER ACTIVE: +25% Fire Rate & 2x Blood Pool Radius"
+			synergy_bonus_label.text = "⚡ CRIMSON BERSERKER: every 6 kills made in blood restores a molotov"
 		elif pair_set.has("napalm_gel") and pair_set.has("thermobaric_ignition"):
 			active_synergy_banner.visible = true
 			synergy_bonus_label.text = "⚡ TACTICAL DEMOLISHER ACTIVE: +50% Burn Time & Concussive Chain Blasts"

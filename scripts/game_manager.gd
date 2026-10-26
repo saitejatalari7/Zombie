@@ -137,14 +137,14 @@ const SKILLS_DATA: Dictionary = {
 	"blood_siphon": {
 		"name": "BLOOD SIPHON",
 		"pair": "crimson_berserker",
-		"desc": "+25% Fire Rate when standing in fresh blood pools.",
+		"desc": "+25% fire rate while you stand in fresh blood.",
 		"cost_rc": 5,
 		"level_req": 2,
 	},
 	"hemorrhage_rounds": {
 		"name": "HEMORRHAGE ROUNDS",
 		"pair": "crimson_berserker",
-		"desc": "Zombies burst into 2x wider blood pools on death.",
+		"desc": "Zombies die into blood pools twice as wide: more ground for Blood Siphon.",
 		"cost_rc": 5,
 		"level_req": 4,
 	},
@@ -182,7 +182,7 @@ const SKILLS_DATA: Dictionary = {
 ## in the hub and can't be bought; anything bought before this existed is refunded on load.
 const PLAYABLE_SECTORS: Array[int] = [1]
 const IMPLEMENTED_WEAPONS: Array[String] = ["assault_carbine"]
-const IMPLEMENTED_SKILLS: Array[String] = []
+const IMPLEMENTED_SKILLS: Array[String] = ["blood_siphon", "hemorrhage_rounds"]
 const WEAPON_UPGRADE_COST_STEP := 150  # Tier N costs N * 150 SC (matches the Armory)
 
 ## Per-kill bounty (SC, unbanked until extraction) and XP.
