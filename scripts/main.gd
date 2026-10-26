@@ -71,6 +71,10 @@ func _load_tactical_sector(sector_id: int) -> void:
 	
 	var scene: PackedScene = SECTOR_SCENES[sector_id]
 	active_sector_node = scene.instantiate() as SectorBase
+	# The contract chooses which layout of the sector to play
+	var gm = get_node_or_null("/root/GameManager")
+	if gm and active_sector_node is LayoutSector:
+		active_sector_node.set("layout_id", String(gm.get_active_contract().get("layout", "")))
 	add_child(active_sector_node)
 	
 	# Position Player at sector spawn point and set bounds

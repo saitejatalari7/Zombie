@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/layout/layout_sector.gd" id="1_layout"]
-[ext_resource type="Script" path="res://scripts/layout/plans/sector1_quarantine_block.gd" id="2_plan"]
+[ext_resource type="Script" path="res://scripts/layout/plans/s1_avenue.gd" id="2_plan"]
 
 [node name="Sector1QuarantineBlock" type="Node3D"]
 script = ExtResource("1_layout")

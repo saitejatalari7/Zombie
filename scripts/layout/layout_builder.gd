@@ -81,6 +81,7 @@ func _init_materials() -> void:
 	_materials["rail"] = _color_mat(Color(0.30, 0.31, 0.35), 0.6)
 	_materials["stripe"] = _color_mat(Color(0.72, 0.0, 0.04), 0.5)
 	_materials["interior"] = _color_mat(Color(0.70, 0.70, 0.73))
+	_materials["water"] = _color_mat(Color(0.20, 0.27, 0.32), 0.08)
 
 
 func _color_mat(color: Color, roughness: float = 0.85) -> StandardMaterial3D:
@@ -131,7 +132,7 @@ func _commit_meshes() -> void:
 		mi.name = "Layout_" + mat_key
 		mi.mesh = st.commit()
 		mi.material_override = _materials[mat_key]
-		if mat_key in ["ground", "paving", "street", "soil"]:
+		if mat_key in ["ground", "paving", "street", "soil", "water"]:
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # flat: shadows only cost
 		_root.add_child(mi)
 	_tools.clear()
@@ -227,6 +228,13 @@ func _build_block(b: Dictionary) -> void:
 			_box("stripe", Vector3(size.x + 0.08, 0.18, size.z + 0.02), Vector3(center.x, base + h * 0.3, center.z))
 		"retaining":
 			_solid("clay", size, center)
+		"water":
+			# Canal surface just above the ground slab; the ground collider underneath is
+			# never reached (railings line every bank), so it needs no collider of its own
+			_box("water", Vector3(size.x, 0.03, size.z), Vector3(center.x, top - 0.015, center.z))
+		"bridge":
+			# Walkable deck painted over water; the ground collider is the floor
+			_box("paving", Vector3(size.x, 0.05, size.z), Vector3(center.x, top - 0.025, center.z))
 		_:
 			_solid("wall", size, center)
 

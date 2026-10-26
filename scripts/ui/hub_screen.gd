@@ -324,12 +324,19 @@ func _build_missions() -> void:
 	if gm and open:
 		contracts = gm.get_contracts(selected_sector)
 		selected_contract = clampi(selected_contract, 0, contracts.size() - 1)
-		col.add_child(UIKit.spacer(4))
 		col.add_child(UIKit.label("CONTRACTS", "CaptionLabel"))
+		# The list scrolls on short screens; PLAY never moves out of thumb reach
+		var scroll := ScrollContainer.new()
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		var list := UIKit.vbox(16)
+		list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(list)
 		for i in range(contracts.size()):
-			col.add_child(_contract_row(contracts[i], i))
-
-	col.add_child(UIKit.expander())
+			list.add_child(_contract_row(contracts[i], i))
+		col.add_child(scroll)
+	else:
+		col.add_child(UIKit.expander())
 	var play := UIKit.button("Play", "", 180)
 	play.add_theme_font_size_override("font_size", 76)
 	play.disabled = contracts.is_empty()
@@ -368,7 +375,7 @@ func _sector_card(s: int) -> Control:
 	st.shadow_size = 14
 	st.shadow_offset = Vector2(0, 6)
 	card.add_theme_stylebox_override("panel", st)
-	card.custom_minimum_size = Vector2(0, 470)
+	card.custom_minimum_size = Vector2(0, 400)
 	card.clip_contents = true
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	card.gui_input.connect(_on_sector_card_input)
@@ -471,7 +478,7 @@ func _contract_row(c: Dictionary, i: int) -> Control:
 	var b := Button.new()
 	b.theme_type_variation = "FlatButton"
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(0, 150)
+	b.custom_minimum_size = Vector2(0, 132)
 	b.pressed.connect(_on_contract.bind(i))
 	var bg := PanelContainer.new()
 	var st := UIKit.rounded(UIKit.PANEL_2 if selected else UIKit.PANEL, 28)
