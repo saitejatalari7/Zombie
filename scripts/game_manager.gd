@@ -627,10 +627,10 @@ func get_sector_unlock_hint(sector_id: int) -> String:
 		return ""
 	var needs: Array[String] = []
 	if not is_sector_cleared(sector_id - 1):
-		needs.append("Extract from SEC-%02d" % (sector_id - 1))
+		needs.append("Finish Sector %d" % (sector_id - 1))
 	if clearance_level < SECTOR_UNLOCK_LEVELS[sector_id]:
-		needs.append("Reach CLR-LV.%02d" % SECTOR_UNLOCK_LEVELS[sector_id])
-	return " · ".join(needs)
+		needs.append("Reach level %d" % SECTOR_UNLOCK_LEVELS[sector_id])
+	return " and ".join(needs)
 
 
 ## The cheapest Armory upgrade for the equipped weapon, for the debrief's next-goal line.

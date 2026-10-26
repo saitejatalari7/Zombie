@@ -163,7 +163,7 @@ func _on_intel_collected(intel_id: String) -> void:
 		return
 	var progress: Vector2i = gm.get_intel_progress(gm.current_sector)
 	hud.show_radio("INTEL %d/%d · %s" % [progress.x, progress.y, entry["title"]], String(entry["text"]))
-	hud.show_powerup_banner("INTEL FOUND  +%d RC" % GameManager.INTEL_RC_REWARD)
+	hud.show_powerup_banner("INTEL FOUND  +%d CORES" % GameManager.INTEL_RC_REWARD)
 
 func _configure_extraction_zone(area: Area3D) -> void:
 	# Player lives on physics layer 2; sector scenes only listened on layer 1.

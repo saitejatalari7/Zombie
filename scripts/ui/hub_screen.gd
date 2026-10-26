@@ -7,11 +7,17 @@ extends Control
 
 enum Tab { MISSIONS, ARMORY, SKILLS, OUTPOST }
 
-const TOP_BAR_H := 270
-const NAV_H := 240
+const TOP_BAR_H := 250
+const NAV_H := 230
 const MAIN_SCENE := "res://scenes/main.tscn"
 const CARBINE_SCENE := preload("res://assets/models/weapons/assault_carbine.glb")
-const SECTOR_NAMES := {1: "QUARANTINE BLOCK", 2: "TRANSIT GRID", 3: "BLACKOUT DOCKS", 4: "CRIMSON COMPLEX"}
+const SECTOR_NAMES := {1: "Quarantine Block", 2: "Transit Grid", 3: "Blackout Docks", 4: "Crimson Complex"}
+const SECTOR_TAGLINES := {
+	1: "Where the outbreak started. The medevac went down here, and so did the block.",
+	2: "Rail yards and tunnels. Survivors are holding out in the terminal.",
+	3: "No power, no light. Something big nests in the cranes.",
+	4: "The lab that made Crimson. End it at the source.",
+}
 const TRACK_INFO := {
 	"damage_knockback": "+12% damage per level",
 	"fire_rate_mag": "+4% fire rate per level",
@@ -23,7 +29,7 @@ const FACILITY_INFO := {
 	"medbay": ["FIELD MEDBAY", "+20 starting health per tier"],
 	"helipad": ["TACTICAL HELIPAD", "-3 s evac hold per tier"],
 }
-const NAV_ITEMS := [["MISSIONS", "missions"], ["ARMORY", "armory"], ["SKILLS", "skills"], ["OUTPOST", "outpost"]]
+const NAV_ITEMS := [["Missions", "missions"], ["Armory", "armory"], ["Skills", "skills"], ["Outpost", "outpost"]]
 
 var gm = null  # GameManager (untyped: its script members are looked up at runtime)
 var current_tab: Tab = Tab.MISSIONS
@@ -35,13 +41,14 @@ var _content: Control = null
 var _nav_row: HBoxContainer = null
 var _weapon_pivot: Node3D = null
 var _refresh_queued: bool = false
+var _swipe_from: float = -1.0
 
 
 func _ready() -> void:
 	gm = get_node_or_null("/root/GameManager")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
-	bg.color = UIKit.PANEL
+	bg.color = UIKit.BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
@@ -77,7 +84,7 @@ func _ready() -> void:
 	_refresh()
 
 	if gm and (gm.pending_refund_sc > 0 or gm.pending_refund_rc > 0):
-		UIKit.toast(self, "Refunded %d SC + %d RC for gear still in development" % [gm.pending_refund_sc, gm.pending_refund_rc])
+		UIKit.toast(self, "Refunded %d coins and %d cores for gear still in development" % [gm.pending_refund_sc, gm.pending_refund_rc])
 		gm.pending_refund_sc = 0
 		gm.pending_refund_rc = 0
 
@@ -121,61 +128,44 @@ func _click() -> void:
 func _build_top_bar() -> void:
 	for c in _top_bar.get_children():
 		c.queue_free()
-	var bg := ColorRect.new()
-	bg.color = UIKit.NAV_BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_top_bar.add_child(bg)
-	var line := ColorRect.new()
-	line.color = UIKit.LINE
-	line.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	line.offset_top = -2
-	_top_bar.add_child(line)
 	if not gm:
 		return
-
-	var row := UIKit.hbox(20)
+	var row := UIKit.hbox(22)
 	row.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	row.offset_left = UIKit.MARGIN
 	row.offset_right = -UIKit.MARGIN
-	row.offset_top = 110
-	row.offset_bottom = 230
+	row.offset_top = UIKit.TOP_SAFE
+	row.offset_bottom = UIKit.TOP_SAFE + 140
 	_top_bar.add_child(row)
 
-	# Rank badge
+	# Level: a round amber badge, the bar shows progress to the next level
 	var badge := PanelContainer.new()
-	var badge_style := StyleBoxFlat.new()
-	badge_style.bg_color = UIKit.AMBER
-	badge.add_theme_stylebox_override("panel", badge_style)
+	badge.add_theme_stylebox_override("panel", UIKit.rounded(UIKit.AMBER, 60))
 	badge.custom_minimum_size = Vector2(120, 120)
-	var badge_col := UIKit.vbox(-6)
-	badge_col.alignment = BoxContainer.ALIGNMENT_CENTER
-	var b1 := UIKit.label("CLR", "SubheadLabel", Color(0.07, 0.07, 0.07), 26)
-	b1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var b2 := UIKit.label("%02d" % gm.clearance_level, "HeadingLabel", Color(0.07, 0.07, 0.07), 58)
-	b2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge_col.add_child(b1)
-	badge_col.add_child(b2)
-	badge.add_child(badge_col)
+	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lvl := UIKit.label(str(gm.clearance_level), "HeadingLabel", Color(0.10, 0.08, 0.02), 64)
+	lvl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lvl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	badge.add_child(lvl)
 	row.add_child(badge)
 
-	# XP
-	var xp_col := UIKit.vbox(8)
+	var xp_col := UIKit.vbox(12)
 	xp_col.alignment = BoxContainer.ALIGNMENT_CENTER
-	xp_col.custom_minimum_size = Vector2(300, 0)
+	xp_col.custom_minimum_size = Vector2(250, 0)
+	xp_col.add_child(UIKit.label("Level %d" % gm.clearance_level, "SubheadLabel", UIKit.TEXT, 42))
 	var need: int = gm.get_xp_for_next_level()
-	xp_col.add_child(UIKit.label("%d / %d XP" % [gm.clearance_xp, need] if need > 0 else "MAX CLEARANCE", "CaptionLabel"))
-	xp_col.add_child(UIKit.bar(float(gm.clearance_xp) / float(maxi(need, 1)) if need > 0 else 1.0))
+	xp_col.add_child(UIKit.bar(float(gm.clearance_xp) / float(maxi(need, 1)) if need > 0 else 1.0, UIKit.AMBER, 16))
 	row.add_child(xp_col)
 
 	row.add_child(UIKit.expander())
 
-	# Currencies
-	var cur := UIKit.vbox(6)
+	var cur := UIKit.vbox(10)
 	cur.alignment = BoxContainer.ALIGNMENT_CENTER
-	var sc := UIKit.currency("coin", gm.survival_coins, UIKit.AMBER)
-	sc.alignment = BoxContainer.ALIGNMENT_END
-	var rc := UIKit.currency("core", gm.research_cores, UIKit.CRIMSON)
-	rc.alignment = BoxContainer.ALIGNMENT_END
+	var sc := UIKit.currency_pill("coin", gm.survival_coins, UIKit.AMBER)
+	sc.size_flags_horizontal = Control.SIZE_SHRINK_END
+	var rc := UIKit.currency_pill("core", gm.research_cores, UIKit.CRIMSON)
+	rc.size_flags_horizontal = Control.SIZE_SHRINK_END
 	cur.add_child(sc)
 	cur.add_child(rc)
 	row.add_child(cur)
@@ -184,7 +174,8 @@ func _build_top_bar() -> void:
 	gear.theme_type_variation = "FlatButton"
 	gear.icon = UIKit.icon_texture("gear")
 	gear.expand_icon = true
-	gear.custom_minimum_size = Vector2(110, 110)
+	gear.custom_minimum_size = Vector2(UIKit.MIN_TOUCH, UIKit.MIN_TOUCH)
+	gear.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	gear.modulate = UIKit.DIM
 	gear.focus_mode = Control.FOCUS_NONE
 	gear.pressed.connect(_open_settings)
@@ -217,34 +208,39 @@ func _build_nav() -> void:
 		var col := UIKit.vbox(8)
 		col.alignment = BoxContainer.ALIGNMENT_CENTER
 		col.set_anchors_preset(Control.PRESET_FULL_RECT)
+		col.offset_top = 10
+		col.offset_bottom = -30  # clear of the system gesture bar
 		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var ic := UIKit.icon(item[1], 70)
+		# Active tab: the icon sits in a soft pill
+		var pill := PanelContainer.new()
+		pill.name = "Pill"
+		pill.add_theme_stylebox_override("panel", UIKit.rounded(UIKit.PANEL_2, 46))
+		pill.custom_minimum_size = Vector2(150, 92)
+		pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ic := UIKit.icon(item[1], 60)
 		ic.name = "Icon"
 		ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		col.add_child(ic)
-		var lb := UIKit.label(item[0], "SubheadLabel", UIKit.DIM, UIKit.SIZE_CAPTION)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		pill.add_child(ic)
+		col.add_child(pill)
+		var lb := UIKit.label(item[0], "SubheadLabel", UIKit.DIM, 32)
 		lb.name = "Label"
 		lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		col.add_child(lb)
 		b.add_child(col)
-		var bar := ColorRect.new()
-		bar.name = "ActiveBar"
-		bar.color = UIKit.CRIMSON
-		bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
-		bar.offset_bottom = 8
-		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(bar)
+		# "Something to spend here" badge
 		var dot := Panel.new()
 		dot.name = "Dot"
-		var ds := StyleBoxFlat.new()
-		ds.bg_color = UIKit.GREEN
-		ds.set_corner_radius_all(11)
+		var ds := UIKit.rounded(UIKit.CRIMSON, 15)
+		ds.border_color = UIKit.NAV_BG
+		ds.set_border_width_all(4)
 		dot.add_theme_stylebox_override("panel", ds)
 		dot.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		dot.offset_left = 40
-		dot.offset_right = 62
-		dot.offset_top = 40
-		dot.offset_bottom = 62
+		dot.offset_left = 44
+		dot.offset_right = 74
+		dot.offset_top = 14
+		dot.offset_bottom = 44
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(dot)
 		_nav_row.add_child(b)
@@ -259,11 +255,14 @@ func _update_nav() -> void:
 	for i in range(_nav_row.get_child_count()):
 		var b := _nav_row.get_child(i)
 		var active := i == int(current_tab)
-		var col := UIKit.CRIMSON if active else UIKit.DIM
-		(b.find_child("Icon", true, false) as CanvasItem).modulate = col
-		(b.find_child("Label", true, false) as Label).add_theme_color_override("font_color", col)
-		(b.get_node("ActiveBar") as CanvasItem).visible = active
-		(b.get_node("Dot") as CanvasItem).visible = bool(ready_flags[i]) and not active
+		var pill := b.find_child("Pill", true, false) as CanvasItem
+		pill.self_modulate = Color(1, 1, 1, 1.0 if active else 0.0)
+		var ic := b.find_child("Icon", true, false) as CanvasItem
+		ic.modulate = UIKit.CRIMSON if active else UIKit.DIM
+		var lb := b.find_child("Label", true, false) as Label
+		lb.add_theme_color_override("font_color", UIKit.TEXT if active else UIKit.DIM)
+		var dot := b.get_node("Dot") as CanvasItem
+		dot.visible = bool(ready_flags[i]) and not active
 
 
 func _on_nav(index: int) -> void:
@@ -280,9 +279,9 @@ func _scroll_column() -> VBoxContainer:
 	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_content.add_child(scroll)
-	var col := UIKit.vbox(20)
+	var col := UIKit.vbox(24)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(UIKit.pad(col, UIKit.MARGIN, 40, UIKit.MARGIN, 40))
+	scroll.add_child(UIKit.pad(col, UIKit.MARGIN, 24, UIKit.MARGIN, 40))
 	(col.get_parent() as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return col
 
@@ -293,143 +292,240 @@ func _header(title: String, right: Control) -> HBoxContainer:
 	row.add_child(t)
 	row.add_child(UIKit.expander())
 	if right:
+		right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(right)
 	return row
 
 
 # ─── Missions ─────────────────────────────────────────────────────────────────
+## One big sector card (swipe or use the arrows), the sector's contracts as
+## tappable rows, and a single PLAY button in thumb reach above the nav bar.
 func _build_missions() -> void:
 	var col := UIKit.vbox(24)
 	col.set_anchors_preset(Control.PRESET_FULL_RECT)
 	col.offset_left = UIKit.MARGIN
 	col.offset_right = -UIKit.MARGIN
-	col.offset_top = 40
-	col.offset_bottom = -40
+	col.offset_top = 16
+	col.offset_bottom = -36
 	_content.add_child(col)
 
-	# Sector strip
-	var strip_scroll := ScrollContainer.new()
-	strip_scroll.custom_minimum_size = Vector2(0, 160)
-	strip_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var strip := UIKit.hbox(16)
-	strip_scroll.add_child(strip)
-	col.add_child(strip_scroll)
-	for s in range(1, 5):
-		strip.add_child(_sector_tile(s))
+	var sectors := _visible_sectors()
+	if not (selected_sector in sectors):
+		selected_sector = int(sectors[0])
+	col.add_child(_sector_card(selected_sector))
+	if sectors.size() > 1:
+		col.add_child(_sector_pager(sectors))
 
+	var open := _is_open(selected_sector)
+	var contracts: Array = []
+	if gm and open:
+		contracts = gm.get_contracts(selected_sector)
+		selected_contract = clampi(selected_contract, 0, contracts.size() - 1)
+		col.add_child(UIKit.spacer(4))
+		col.add_child(UIKit.label("CONTRACTS", "CaptionLabel"))
+		for i in range(contracts.size()):
+			col.add_child(_contract_row(contracts[i], i))
+
+	col.add_child(UIKit.expander())
+	var play := UIKit.button("Play", "", 180)
+	play.add_theme_font_size_override("font_size", 76)
+	play.disabled = contracts.is_empty()
+	if not contracts.is_empty():
+		play.pressed.connect(_show_briefing.bind(contracts[selected_contract]))
+	col.add_child(play)
+
+
+## Playable sectors, plus the first unreleased one as a "coming soon" teaser.
+func _visible_sectors() -> Array:
+	var out: Array = [1]
 	if not gm:
-		return
-	var contracts: Array = gm.get_contracts(selected_sector)
-	selected_contract = clampi(selected_contract, 0, contracts.size() - 1)
-	var c: Dictionary = contracts[selected_contract]
-
-	# Contract card
-	var card := UIKit.card()
-	card.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(card)
-	var body := UIKit.vbox(22)
-	card.add_child(body)
-	var head := UIKit.hbox(16)
-	head.add_child(UIKit.label("CONTRACT %d / %d" % [selected_contract + 1, contracts.size()], "CaptionLabel", UIKit.AMBER))
-	head.add_child(UIKit.expander())
-	head.add_child(UIKit.label(String(c.get("threat", "")).replace("THREAT: ", "THREAT · "), "CaptionLabel"))
-	body.add_child(head)
-	var title := UIKit.label(_short_title(c), "HeadingLabel", UIKit.TEXT, 70)
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body.add_child(title)
-	body.add_child(UIKit.paragraph(String(c.get("desc", "")), UIKit.TEXT_SOFT, 34))
-	var steps := UIKit.vbox(12)
-	var n := 1
-	for line in _objective_lines(c):
-		var r := UIKit.hbox(16)
-		var num := UIKit.label(str(n), "SubheadLabel", UIKit.AMBER, 36)
-		num.custom_minimum_size = Vector2(44, 0)
-		r.add_child(num)
-		r.add_child(UIKit.paragraph(line, UIKit.TEXT, 34))
-		steps.add_child(r)
-		n += 1
-	body.add_child(steps)
-	body.add_child(UIKit.expander())
-	var first_clear: bool = not gm.is_sector_cleared(selected_sector)
-	var payout: int = gm.get_contract_payout_sc(c) * (GameManager.FIRST_CLEAR_MULTIPLIER if first_clear else 1)
-	var rewards := UIKit.hbox(30)
-	rewards.add_child(UIKit.label("+%s SC" % UIKit.fmt_int(payout), "SubheadLabel", UIKit.AMBER))
-	rewards.add_child(UIKit.label("+%d RC" % int(c.get("payout_rc", 0)), "SubheadLabel", UIKit.CRIMSON))
-	if first_clear:
-		var fc := UIKit.label("FIRST CLEAR ×2", "CaptionLabel", UIKit.GREEN)
-		fc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		rewards.add_child(fc)
-	body.add_child(rewards)
-
-	# Actions
-	var actions := UIKit.hbox(20)
-	if contracts.size() > 1:
-		var next := UIKit.button("Next ›", "GhostButton")
-		next.custom_minimum_size.x = 220
-		next.pressed.connect(_on_next_contract)
-		actions.add_child(next)
-	var deploy := UIKit.button("Deploy")
-	deploy.add_theme_font_size_override("font_size", 56)
-	deploy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	deploy.pressed.connect(_show_briefing.bind(c))
-	actions.add_child(deploy)
-	col.add_child(actions)
+		return out
+	for s in range(2, 5):
+		out.append(s)
+		if not gm.is_sector_playable(s):
+			break
+	return out
 
 
-func _sector_tile(s: int) -> Control:
+func _is_open(s: int) -> bool:
+	if not gm:
+		return s == 1
+	return gm.is_sector_playable(s) and s <= int(gm.highest_sector_unlocked)
+
+
+func _sector_card(s: int) -> Control:
+	var open := _is_open(s)
 	var playable: bool = gm.is_sector_playable(s) if gm else s == 1
-	var unlocked: bool = gm != null and s <= int(gm.highest_sector_unlocked)
-	var selected := s == selected_sector
-	var tile := Button.new()
-	tile.theme_type_variation = "FlatButton"
-	tile.focus_mode = Control.FOCUS_NONE
-	tile.custom_minimum_size = Vector2(440, 150)
-	tile.disabled = not (playable and unlocked)
-	tile.pressed.connect(_on_sector.bind(s))
-	var bg := PanelContainer.new()
-	var st := StyleBoxFlat.new()
-	st.bg_color = UIKit.PANEL_2 if (playable and unlocked) else Color(0.086, 0.086, 0.098)
-	st.border_color = UIKit.CRIMSON if selected else UIKit.LINE
-	st.set_border_width_all(4 if selected else 2)
-	st.set_content_margin_all(18)
-	bg.add_theme_stylebox_override("panel", st)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var v := UIKit.vbox(4)
-	var top := UIKit.hbox(8)
-	top.add_child(UIKit.label("SEC-%02d" % s, "SubheadLabel", UIKit.CRIMSON if selected else UIKit.DIM, UIKit.SIZE_CAPTION))
-	top.add_child(UIKit.expander())
-	if not (playable and unlocked):
-		top.add_child(UIKit.icon("lock", 36, UIKit.MUTED))
+	var card := PanelContainer.new()
+	var st := UIKit.rounded(UIKit.PANEL_2 if open else UIKit.PANEL, UIKit.RADIUS)
+	st.border_color = UIKit.CRIMSON if open else UIKit.LINE
+	st.set_border_width_all(3)
+	st.set_content_margin_all(40)
+	st.shadow_color = Color(0, 0, 0, 0.35)
+	st.shadow_size = 14
+	st.shadow_offset = Vector2(0, 6)
+	card.add_theme_stylebox_override("panel", st)
+	card.custom_minimum_size = Vector2(0, 470)
+	card.clip_contents = true
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.gui_input.connect(_on_sector_card_input)
+
+	# Big faint sector number in the corner
+	var mark := UIKit.label("%02d" % s, "DisplayLabel", Color(UIKit.TEXT, 0.05), 330)
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	mark.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	card.add_child(mark)
+
+	var v := UIKit.vbox(18)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(v)
+	var top := UIKit.hbox(12)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_child(UIKit.chip("SECTOR %d" % s, UIKit.CRIMSON if open else UIKit.DIM))
+	if gm and gm.is_sector_cleared(s):
+		top.add_child(UIKit.chip("CLEARED", UIKit.GREEN))
 	v.add_child(top)
-	var sub: String
-	if not playable:
-		sub = "CLASSIFIED"
-	elif not unlocked:
-		sub = gm.get_sector_unlock_hint(s).to_upper() if gm else "LOCKED"
+	var title := UIKit.label(String(SECTOR_NAMES.get(s, "Sector")).to_upper(), "DisplayLabel", UIKit.TEXT if open else UIKit.MUTED, 104)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(title)
+	v.add_child(UIKit.paragraph(String(SECTOR_TAGLINES.get(s, "")), UIKit.TEXT_SOFT if open else UIKit.DIM, 36))
+	v.add_child(UIKit.expander())
+	if open:
+		var stats := UIKit.hbox(14)
+		stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stats.add_child(UIKit.chip("%d CONTRACTS" % gm.get_contracts(s).size(), UIKit.TEXT_SOFT))
+		var intel: Vector2i = gm.get_intel_progress(s)
+		if intel.y > 0:
+			stats.add_child(UIKit.chip("INTEL %d / %d" % [intel.x, intel.y], UIKit.AMBER))
+		v.add_child(stats)
 	else:
-		sub = SECTOR_NAMES.get(s, "SECTOR")
-	var name_label := UIKit.label(sub, "SubheadLabel", UIKit.TEXT if (playable and unlocked) else UIKit.MUTED, 36 if (playable and unlocked) else 28)
-	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	v.add_child(name_label)
-	bg.add_child(v)
-	tile.add_child(bg)
-	return tile
+		var lock := UIKit.hbox(18)
+		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ic := UIKit.icon("lock", 52, UIKit.AMBER if playable else UIKit.MUTED)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		lock.add_child(ic)
+		var why := "Coming in a future update"
+		if playable and gm:
+			why = "To unlock: " + gm.get_sector_unlock_hint(s)
+		lock.add_child(UIKit.paragraph(why, UIKit.AMBER if playable else UIKit.DIM, 36))
+		v.add_child(lock)
+	return card
 
 
-func _on_sector(s: int) -> void:
+## Arrows and page dots under the sector card.
+func _sector_pager(sectors: Array) -> Control:
+	var row := UIKit.hbox(28)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	var idx := sectors.find(selected_sector)
+	var prev := UIKit.button("‹", "GhostButton", 100)
+	prev.custom_minimum_size.x = 120
+	prev.disabled = idx <= 0
+	prev.pressed.connect(_step_sector.bind(-1))
+	row.add_child(prev)
+	var dots := UIKit.hbox(14)
+	dots.alignment = BoxContainer.ALIGNMENT_CENTER
+	dots.custom_minimum_size.x = 260
+	for i in range(sectors.size()):
+		var d := Panel.new()
+		var active := i == idx
+		d.custom_minimum_size = Vector2(52 if active else 20, 20)
+		d.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		d.add_theme_stylebox_override("panel", UIKit.rounded(UIKit.CRIMSON if active else UIKit.LINE, 10))
+		d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dots.add_child(d)
+	row.add_child(dots)
+	var next := UIKit.button("›", "GhostButton", 100)
+	next.custom_minimum_size.x = 120
+	next.disabled = idx >= sectors.size() - 1
+	next.pressed.connect(_step_sector.bind(1))
+	row.add_child(next)
+	return row
+
+
+func _step_sector(dir: int) -> void:
+	var sectors := _visible_sectors()
+	var idx := clampi(sectors.find(selected_sector) + dir, 0, sectors.size() - 1)
+	if int(sectors[idx]) == selected_sector:
+		return
 	_click()
-	selected_sector = s
+	selected_sector = int(sectors[idx])
 	selected_contract = 0
 	_refresh()
 
 
-func _on_next_contract() -> void:
+## Horizontal swipe on the sector card changes sector.
+func _on_sector_card_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if mb == null or mb.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if mb.pressed:
+		_swipe_from = mb.position.x
+	elif _swipe_from >= 0.0:
+		var dx := mb.position.x - _swipe_from
+		_swipe_from = -1.0
+		if absf(dx) > 120.0:
+			_step_sector(-1 if dx > 0.0 else 1)
+
+
+func _contract_row(c: Dictionary, i: int) -> Control:
+	var selected := i == selected_contract
+	var b := Button.new()
+	b.theme_type_variation = "FlatButton"
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 150)
+	b.pressed.connect(_on_contract.bind(i))
+	var bg := PanelContainer.new()
+	var st := UIKit.rounded(UIKit.PANEL_2 if selected else UIKit.PANEL, 28)
+	st.border_color = UIKit.CRIMSON if selected else UIKit.LINE
+	st.set_border_width_all(4 if selected else 2)
+	st.content_margin_left = 28
+	st.content_margin_right = 32
+	bg.add_theme_stylebox_override("panel", st)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := UIKit.hbox(24)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var num := PanelContainer.new()
+	num.add_theme_stylebox_override("panel", UIKit.rounded(UIKit.CRIMSON if selected else UIKit.PANEL_2, 38))
+	num.custom_minimum_size = Vector2(76, 76)
+	num.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var n := UIKit.label(str(i + 1), "SubheadLabel", UIKit.TEXT, 42)
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	num.add_child(n)
+	row.add_child(num)
+	var info := UIKit.vbox(4)
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var t := UIKit.label(_short_title(c), "SubheadLabel", UIKit.TEXT if selected else UIKit.TEXT_SOFT, 44)
+	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	t.clip_text = true
+	info.add_child(t)
+	info.add_child(UIKit.label("%d steps" % _objective_lines(c).size(), "CaptionLabel"))
+	row.add_child(info)
+	var pay := UIKit.currency("coin", _payout(c), UIKit.AMBER, 40, "+")
+	pay.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(pay)
+	bg.add_child(row)
+	b.add_child(bg)
+	return b
+
+
+func _on_contract(i: int) -> void:
+	if i == selected_contract:
+		return
 	_click()
-	selected_contract += 1
-	if gm and selected_contract >= gm.get_contracts(selected_sector).size():
-		selected_contract = 0
+	selected_contract = i
 	_refresh()
+
+
+func _payout(c: Dictionary) -> int:
+	if not gm:
+		return 0
+	var first_clear: bool = not gm.is_sector_cleared(selected_sector)
+	return gm.get_contract_payout_sc(c) * (GameManager.FIRST_CLEAR_MULTIPLIER if first_clear else 1)
 
 
 func _short_title(c: Dictionary) -> String:
@@ -448,60 +544,106 @@ func _objective_lines(c: Dictionary) -> PackedStringArray:
 			lines.append("Recover the flight recorder")
 		_:
 			lines.append("Eliminate %d hostiles" % int(c.get("kills_required", 25)))
-	lines.append("Hold the LZ")
+	lines.append("Hold the landing zone")
 	return lines
 
 
-# ─── Briefing ─────────────────────────────────────────────────────────────────
+# ─── Briefing (bottom sheet) ──────────────────────────────────────────────────
+## Why you're going in, what to do, what you get. Tap outside to back out.
 func _show_briefing(c: Dictionary) -> void:
 	_click()
 	var layer := Control.new()
 	layer.name = "Briefing"
 	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(layer)
-	layer.add_child(UIKit.overlay(0.94))
-	var col := UIKit.vbox(30)
-	col.set_anchors_preset(Control.PRESET_FULL_RECT)
-	col.offset_left = UIKit.MARGIN
-	col.offset_right = -UIKit.MARGIN
-	col.offset_top = UIKit.TOP_SAFE + 100
-	col.offset_bottom = -100
-	layer.add_child(col)
+	var shade := UIKit.overlay(0.72)
+	shade.gui_input.connect(_on_sheet_shade_input.bind(layer))
+	layer.add_child(shade)
 
-	col.add_child(UIKit.label("MISSION BRIEFING  ·  SEC-%02d" % selected_sector, "CaptionLabel", UIKit.AMBER, 34))
+	var sheet := PanelContainer.new()
+	var st := UIKit.rounded(UIKit.PANEL, 48)
+	st.corner_radius_bottom_left = 0
+	st.corner_radius_bottom_right = 0
+	st.border_color = UIKit.LINE
+	st.border_width_top = 2
+	st.content_margin_left = UIKit.MARGIN
+	st.content_margin_right = UIKit.MARGIN
+	st.content_margin_top = 28
+	st.content_margin_bottom = 70
+	sheet.add_theme_stylebox_override("panel", st)
+	sheet.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	sheet.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	sheet.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(sheet)
+	var col := UIKit.vbox(28)
+	sheet.add_child(col)
+
+	var grab := Panel.new()
+	grab.custom_minimum_size = Vector2(120, 10)
+	grab.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	grab.add_theme_stylebox_override("panel", UIKit.rounded(UIKit.LINE, 5))
+	col.add_child(grab)
+
+	col.add_child(UIKit.label("SECTOR %d  ·  %s" % [selected_sector, String(SECTOR_NAMES.get(selected_sector, "")).to_upper()], "CaptionLabel", UIKit.AMBER, 32))
 	var title := UIKit.label(_short_title(c), "DisplayLabel")
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(title)
 
 	var radio := UIKit.card("AccentCard")
-	var rrow := UIKit.hbox(26)
-	rrow.add_child(UIKit.icon("radio", 80, UIKit.AMBER))
+	var rrow := UIKit.hbox(24)
+	var ric := UIKit.icon("radio", 72, UIKit.AMBER)
+	ric.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	rrow.add_child(ric)
 	var rcol := UIKit.vbox(10)
 	rcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rcol.add_child(UIKit.label("OVERWATCH", "CaptionLabel", UIKit.AMBER))
-	rcol.add_child(UIKit.paragraph(String(c.get("briefing", c.get("desc", ""))), UIKit.TEXT, 38))
+	rcol.add_child(UIKit.paragraph(String(c.get("briefing", c.get("desc", ""))), UIKit.TEXT, 36))
 	rrow.add_child(rcol)
 	radio.add_child(rrow)
 	col.add_child(radio)
 
-	col.add_child(UIKit.label("OBJECTIVES", "CaptionLabel"))
+	var steps := UIKit.vbox(14)
 	var n := 1
 	for line in _objective_lines(c):
-		col.add_child(UIKit.paragraph("%d  ·  %s" % [n, line], UIKit.TEXT, 36))
+		var r := UIKit.hbox(20)
+		var dot := PanelContainer.new()
+		dot.add_theme_stylebox_override("panel", UIKit.rounded(UIKit.PANEL_2, 28))
+		dot.custom_minimum_size = Vector2(56, 56)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var dn := UIKit.label(str(n), "SubheadLabel", UIKit.AMBER, 34)
+		dn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		dn.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		dot.add_child(dn)
+		r.add_child(dot)
+		var tl := UIKit.paragraph(line, UIKit.TEXT, 38)
+		tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		r.add_child(tl)
+		steps.add_child(r)
 		n += 1
-	if gm:
-		var intel: Vector2i = gm.get_intel_progress(selected_sector)
-		if intel.y > 0:
-			col.add_child(UIKit.label("Intel found %d / %d" % [intel.x, intel.y], "CaptionLabel"))
+	col.add_child(steps)
 
-	col.add_child(UIKit.expander())
-	var start := UIKit.button("Start mission", "", 170)
-	start.add_theme_font_size_override("font_size", 60)
+	var rewards := UIKit.hbox(30)
+	rewards.add_child(UIKit.label("REWARD", "CaptionLabel"))
+	rewards.add_child(UIKit.currency("coin", _payout(c), UIKit.AMBER, 48, "+"))
+	if int(c.get("payout_rc", 0)) > 0:
+		rewards.add_child(UIKit.currency("core", int(c.get("payout_rc", 0)), UIKit.CRIMSON, 48, "+"))
+	if gm and not gm.is_sector_cleared(selected_sector):
+		rewards.add_child(UIKit.chip("FIRST CLEAR ×2", UIKit.GREEN))
+	col.add_child(rewards)
+
+	var start := UIKit.button("Start mission", "", 180)
+	start.add_theme_font_size_override("font_size", 64)
 	start.pressed.connect(_deploy.bind(c))
 	col.add_child(start)
-	var back := UIKit.button("Back", "FlatButton", UIKit.MIN_TOUCH)
-	back.pressed.connect(layer.queue_free)
-	col.add_child(back)
+
+	layer.modulate.a = 0.0
+	layer.create_tween().tween_property(layer, "modulate:a", 1.0, 0.15)
+
+
+func _on_sheet_shade_input(event: InputEvent, layer: Control) -> void:
+	var mb := event as InputEventMouseButton
+	if mb and mb.pressed:
+		layer.queue_free()
 
 
 func _deploy(c: Dictionary) -> void:
@@ -577,8 +719,8 @@ func _build_armory() -> void:
 		info.add_child(UIKit.label(TRACK_INFO.get(track, ""), "CaptionLabel"))
 		info.add_child(UIKit.pips(lv, GameManager.MAX_WEAPON_UPGRADE_LEVEL))
 		row.add_child(info)
-		var buy := UIKit.button("MAX" if maxed else "%s SC" % UIKit.fmt_int(cost), "AmberButton", 130)
-		buy.custom_minimum_size.x = 250
+		var buy := UIKit.button("MAX" if maxed else UIKit.fmt_int(cost), "AmberButton", 130, "" if maxed else "coin")
+		buy.custom_minimum_size.x = 260
 		buy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		buy.disabled = maxed or gm.survival_coins < cost
 		buy.pressed.connect(_on_upgrade_weapon.bind(weapon, track, cost))
@@ -657,11 +799,11 @@ func _build_skills() -> void:
 			action = UIKit.button("Equip", "", UIKit.MIN_TOUCH)
 			action.pressed.connect(_on_equip.bind(skill_id))
 		elif gm.clearance_level < int(data.get("level_req", 1)):
-			action = UIKit.button("Requires CLR-LV.%02d" % int(data.get("level_req", 1)), "GhostButton", UIKit.MIN_TOUCH)
+			action = UIKit.button("Unlocks at level %d" % int(data.get("level_req", 1)), "GhostButton", UIKit.MIN_TOUCH, "lock")
 			action.disabled = true
 		else:
 			var cost := int(data.get("cost_rc", 0))
-			action = UIKit.button("Unlock · %d RC" % cost, "AmberButton", UIKit.MIN_TOUCH)
+			action = UIKit.button("Unlock  %d" % cost, "AmberButton", UIKit.MIN_TOUCH, "core")
 			action.disabled = gm.research_cores < cost
 			action.pressed.connect(_on_unlock_skill.bind(skill_id, cost))
 		v.add_child(action)
@@ -722,7 +864,13 @@ func _build_outpost() -> void:
 		v.add_child(UIKit.label(String(info[1]), "CaptionLabel"))
 		v.add_child(UIKit.label(_facility_now(facility, lv), "", UIKit.AMBER, 34))
 		v.add_child(UIKit.pips(lv, GameManager.MAX_OUTPOST_UPGRADE_LEVEL))
-		var b := UIKit.button("Max tier" if maxed else "Upgrade · %s SC + %d RC" % [UIKit.fmt_int(cost.x), cost.y], "AmberButton", UIKit.MIN_TOUCH)
+		if not maxed:
+			var price := UIKit.hbox(30)
+			price.add_child(UIKit.label("COST", "CaptionLabel"))
+			price.add_child(UIKit.currency("coin", cost.x, UIKit.AMBER, 40))
+			price.add_child(UIKit.currency("core", cost.y, UIKit.CRIMSON, 40))
+			v.add_child(price)
+		var b := UIKit.button("Max tier" if maxed else "Upgrade", "AmberButton", UIKit.MIN_TOUCH)
 		b.disabled = maxed or gm.survival_coins < cost.x or gm.research_cores < cost.y
 		b.pressed.connect(_on_upgrade_facility.bind(facility))
 		v.add_child(b)

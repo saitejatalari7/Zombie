@@ -7,21 +7,23 @@ class_name UIKit
 ## The Theme itself (fonts, button and panel styles) is built by the UiTheme autoload.
 
 # ─── Colour: one job per colour ───────────────────────────────────────────────
-const PANEL := Color(0.067, 0.067, 0.075)          # #111113
-const PANEL_2 := Color(0.11, 0.11, 0.125)          # #1c1c20
-const NAV_BG := Color(0.043, 0.043, 0.051)         # #0b0b0d
-const LINE := Color(0.18, 0.18, 0.204)             # #2e2e34
-const TEXT := Color(0.957, 0.957, 0.965)           # #f4f4f6
-const TEXT_SOFT := Color(0.784, 0.784, 0.816)      # body copy on panels
-const DIM := Color(0.604, 0.604, 0.643)            # #9a9aa4
-const MUTED := Color(0.424, 0.424, 0.455)          # disabled / locked
-const CRIMSON := Color(0.898, 0.035, 0.078)        # actions, danger
-const CRIMSON_DARK := Color(0.561, 0.0, 0.035)
-const AMBER := Color(1.0, 0.722, 0.0)              # coins, objectives, progress
-const AMBER_DARK := Color(0.541, 0.392, 0.0)
-const CYAN := Color(0.247, 0.878, 0.941)           # the player
-const GREEN := Color(0.31, 0.82, 0.545)            # success, "ready"
-const BAR_BG := Color(0.165, 0.165, 0.184)
+# Warm-neutral charcoal rather than pure black, so panels read as soft surfaces.
+const BG := Color(0.078, 0.086, 0.110)             # #14161c screen background
+const PANEL := Color(0.114, 0.125, 0.161)          # #1d2029 cards
+const PANEL_2 := Color(0.153, 0.169, 0.212)        # #272b36 raised / selected
+const NAV_BG := Color(0.063, 0.071, 0.090)         # #101217
+const LINE := Color(0.204, 0.224, 0.275)           # #343946
+const TEXT := Color(0.961, 0.965, 0.980)           # #f5f6fa
+const TEXT_SOFT := Color(0.788, 0.800, 0.839)      # body copy on panels
+const DIM := Color(0.561, 0.580, 0.639)            # #8f94a3 secondary
+const MUTED := Color(0.400, 0.420, 0.478)          # disabled / locked
+const CRIMSON := Color(1.0, 0.200, 0.278)          # #ff3347 actions
+const CRIMSON_DARK := Color(0.690, 0.094, 0.165)
+const AMBER := Color(1.0, 0.773, 0.192)            # #ffc531 coins, progress
+const AMBER_DARK := Color(0.690, 0.490, 0.0)
+const CYAN := Color(0.310, 0.847, 0.941)           # the player
+const GREEN := Color(0.290, 0.871, 0.502)          # #4ade80 success, "ready"
+const BAR_BG := Color(0.200, 0.216, 0.263)
 
 # ─── Type scale (never below CAPTION) ─────────────────────────────────────────
 const SIZE_DISPLAY := 96
@@ -35,6 +37,8 @@ const MARGIN := 48
 const TOP_SAFE := 96
 const MIN_TOUCH := 120
 const PRIMARY_HEIGHT := 150
+const RADIUS := 32          # cards
+const RADIUS_BUTTON := 36   # chunky, friendly buttons
 
 
 static func icon_texture(icon_name: String) -> Texture2D:
@@ -73,9 +77,11 @@ static func paragraph(text: String, color: Color = TEXT_SOFT, size: int = SIZE_B
 
 
 ## variation: "" (crimson primary), "GhostButton", "AmberButton"
-static func button(text: String, variation: String = "", height: int = PRIMARY_HEIGHT) -> Button:
+static func button(text: String, variation: String = "", height: int = PRIMARY_HEIGHT, icon_name: String = "") -> Button:
 	var b := Button.new()
 	b.text = text.to_upper()
+	if icon_name != "":
+		b.icon = icon_texture(icon_name)
 	b.theme_type_variation = variation
 	b.custom_minimum_size = Vector2(0, height)
 	b.focus_mode = Control.FOCUS_NONE
@@ -124,8 +130,10 @@ static func bar(fraction: float, fill: Color = AMBER, height: int = 18) -> Progr
 	pb.custom_minimum_size = Vector2(0, height)
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = BAR_BG
+	bg.set_corner_radius_all(height / 2)
 	var fg := StyleBoxFlat.new()
 	fg.bg_color = fill
+	fg.set_corner_radius_all(height / 2)
 	pb.add_theme_stylebox_override("background", bg)
 	pb.add_theme_stylebox_override("fill", fg)
 	pb.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -137,21 +145,61 @@ static func pips(lit: int, total: int, color: Color = AMBER) -> HBoxContainer:
 	var row := hbox(8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for i in range(total):
-		var p := ColorRect.new()
-		p.custom_minimum_size = Vector2(30, 18)
-		p.color = color if i < lit else BAR_BG
+		var p := Panel.new()
+		p.custom_minimum_size = Vector2(34, 16)
+		p.add_theme_stylebox_override("panel", rounded(color if i < lit else BAR_BG, 8))
 		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(p)
 	return row
 
 
 ## Icon + value, e.g. coins in the top bar.
-static func currency(icon_name: String, value: int, color: Color, size: int = SIZE_BUTTON) -> HBoxContainer:
+static func currency(icon_name: String, value: int, color: Color, size: int = SIZE_BUTTON, prefix: String = "") -> HBoxContainer:
 	var row := hbox(10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(icon(icon_name, size, color))
-	row.add_child(label(fmt_int(value), "SubheadLabel", color, size))
+	var ic := icon(icon_name, size, color)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(ic)
+	row.add_child(label(prefix + fmt_int(value), "SubheadLabel", color if prefix != "" else TEXT, size))
 	return row
+
+
+## A currency value in a dark rounded pill (top bars).
+static func currency_pill(icon_name: String, value: int, color: Color) -> PanelContainer:
+	var p := PanelContainer.new()
+	var st := rounded(NAV_BG, 40)
+	st.content_margin_left = 18
+	st.content_margin_right = 30
+	st.content_margin_top = 8
+	st.content_margin_bottom = 8
+	p.add_theme_stylebox_override("panel", st)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(currency(icon_name, value, color, 46))
+	return p
+
+
+## A flat rounded StyleBox (pills, badges, segments).
+static func rounded(bg: Color, radius: int = RADIUS) -> StyleBoxFlat:
+	var st := StyleBoxFlat.new()
+	st.bg_color = bg
+	st.set_corner_radius_all(radius)
+	st.anti_aliasing = true
+	return st
+
+
+## A small coloured chip with text, e.g. "FIRST CLEAR x2".
+static func chip(text: String, color: Color, size: int = SIZE_CAPTION) -> PanelContainer:
+	var p := PanelContainer.new()
+	var st := rounded(Color(color, 0.16), 28)
+	st.content_margin_left = 20
+	st.content_margin_right = 20
+	st.content_margin_top = 6
+	st.content_margin_bottom = 6
+	p.add_theme_stylebox_override("panel", st)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.add_child(label(text, "CaptionLabel", color, size))
+	return p
 
 
 ## A full-screen dimmed overlay that swallows input (modals, briefing, debrief).

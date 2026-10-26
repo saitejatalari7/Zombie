@@ -38,19 +38,15 @@ const STATUS_MESSAGES: Array[String] = [
 ]
 
 const TACTICAL_TIPS: Array[String] = [
-	"RUNNER-CLASS HOSTILES TRACK BLOOD FOOTPRINTS. TREAD CAREFULLY.",
-	"MOLOTOV COCKTAILS ARE MOST EFFECTIVE IN NARROW CHOKEPOINTS.",
-	"UPGRADE THE HELIPAD AT THE OUTPOST TO REDUCE EXTRACTION TIME.",
-	"NIGHT OPS REQUIRE TACTICAL FLASHLIGHT DISCIPLINE — SWEEP CORNERS.",
-	"ESCORT VIPS STAY CLOSE TO YOUR PATH. CLEAR REAR FLANKS FREQUENTLY.",
-	"RESEARCH CORES (RC) ARE HARVESTED FROM BIO-LABS AND CRIMSON BOSSES.",
-	"PAIR SYNERGISTIC OPERATIVE SKILLS FOR EXPONENTIAL MULTIPLIERS.",
-	"CARRYING HEAVY FLIGHT RECORDERS ENFORCES ONE-HANDED SHOOTING.",
-	"BURNING ZOMBIES SPREAD CRIMSON FIRE TO ADJACENT HORDE MEMBERS.",
-	"CRIMSON BOSSES CRUSH LIGHT COVER. MAINTAIN MINIMUM ENGAGEMENT DISTANCE.",
-	"OVERPRESSURE ROUNDS KNOCK SHAMBLERS BACKWARD INTO SOLID WALLS.",
-	"PIERCING CORES ALLOW ASSAULT ROUNDS TO PUNCTURE MULTIPLE TARGETS.",
-	"DYING FORFEITS 70% OF UNBANKED SCAVENGED LOOT. EXTRACT EARLY IF WOUNDED.",
+	"Tap the fire button to switch auto-fire on or off.",
+	"Molotovs work best in doorways and narrow streets.",
+	"Upgrade the helipad at the Outpost to shorten the evac hold.",
+	"Standing in blood powers up Blood Siphon. Pair it with Hemorrhage Rounds.",
+	"Dying costs you 70% of the coins you picked up. Extract if you're hurt.",
+	"Intel files are hidden in every sector. Each one pays research cores.",
+	"Shoulder-charge through a crowd to knock zombies off their feet.",
+	"Your first extraction from a sector pays double.",
+	"Zombies follow you indoors. Watch the doorway behind you.",
 ]
 
 # ─── Lifecycle ─────────────────────────────────────────────────────────────────

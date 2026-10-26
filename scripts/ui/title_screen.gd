@@ -11,7 +11,7 @@ const DIORAMA_SCENE := preload("res://scenes/ui/outpost_diorama.tscn")
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
-	bg.color = UIKit.PANEL
+	bg.color = UIKit.BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
@@ -29,7 +29,7 @@ func _ready() -> void:
 	# Dark at the top (logo) and bottom (button), clear in the middle
 	var grad := Gradient.new()
 	grad.offsets = PackedFloat32Array([0.0, 0.42, 0.68, 1.0])
-	grad.colors = PackedColorArray([Color(UIKit.PANEL, 0.96), Color(UIKit.PANEL, 0.5), Color(UIKit.PANEL, 0.12), Color(UIKit.PANEL, 0.94)])
+	grad.colors = PackedColorArray([Color(UIKit.BG, 0.96), Color(UIKit.BG, 0.5), Color(UIKit.BG, 0.12), Color(UIKit.BG, 0.94)])
 	var gtex := GradientTexture2D.new()
 	gtex.gradient = grad
 	gtex.fill_from = Vector2(0.5, 0.0)
@@ -66,14 +66,17 @@ func _ready() -> void:
 	bottom.offset_top = -480
 	bottom.offset_bottom = -140
 	add_child(bottom)
-	var deploy := UIKit.button("Tap to deploy", "", 170)
-	deploy.add_theme_font_size_override("font_size", 60)
+	var deploy := UIKit.button("Play", "", 180)
+	deploy.add_theme_font_size_override("font_size", 76)
 	deploy.pressed.connect(_on_deploy)
 	bottom.add_child(deploy)
 	var gm = get_node_or_null("/root/GameManager")
 	if gm:
-		var stats := UIKit.label("CLR-LV.%02d   ·   %s SC   ·   %d RC" % [gm.clearance_level, UIKit.fmt_int(gm.survival_coins), gm.research_cores], "CaptionLabel")
-		stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var stats := UIKit.hbox(36)
+		stats.alignment = BoxContainer.ALIGNMENT_CENTER
+		stats.add_child(UIKit.label("Level %d" % gm.clearance_level, "SubheadLabel", UIKit.TEXT_SOFT, 40))
+		stats.add_child(UIKit.currency("coin", gm.survival_coins, UIKit.AMBER, 40))
+		stats.add_child(UIKit.currency("core", gm.research_cores, UIKit.CRIMSON, 40))
 		bottom.add_child(stats)
 
 	# Settings gear

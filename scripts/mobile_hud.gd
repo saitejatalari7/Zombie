@@ -551,14 +551,14 @@ func show_mission_result(summary: Dictionary) -> void:
 		var rv := UIKit.vbox(18)
 		var kills: Dictionary = summary.get("kills", {})
 		if success:
-			var contract_text := "+%s SC" % UIKit.fmt_int(int(summary.get("contract_sc", 0)))
+			var contract_text := "+%s" % UIKit.fmt_int(int(summary.get("contract_sc", 0)))
 			if summary.get("first_clear", false):
 				contract_text += "  (FIRST CLEAR ×2)"
 			rv.add_child(_result_row("Contract", contract_text, UIKit.TEXT))
-			rv.add_child(_result_row("Kills (%d)" % int(summary.get("kill_count", 0)), "+%s SC" % UIKit.fmt_int(int(summary.get("kill_sc", 0))), UIKit.TEXT))
+			rv.add_child(_result_row("Kills (%d)" % int(summary.get("kill_count", 0)), "+%s" % UIKit.fmt_int(int(summary.get("kill_sc", 0))), UIKit.TEXT))
 		else:
 			rv.add_child(_result_row("Kills (%d)" % int(summary.get("kill_count", 0)), "", UIKit.TEXT))
-			rv.add_child(_result_row("Unbanked loot lost", "-%s SC" % UIKit.fmt_int(int(summary.get("lost_sc", 0))), UIKit.CRIMSON))
+			rv.add_child(_result_row("Coins lost", "-%s" % UIKit.fmt_int(int(summary.get("lost_sc", 0))), UIKit.CRIMSON))
 		var intel: Vector2i = summary.get("intel", Vector2i.ZERO)
 		if intel.y > 0:
 			rv.add_child(_result_row("Intel found", "%d / %d" % [intel.x, intel.y], UIKit.TEXT))
@@ -567,19 +567,19 @@ func show_mission_result(summary: Dictionary) -> void:
 		line.custom_minimum_size = Vector2(0, 2)
 		rv.add_child(line)
 		var totals := UIKit.hbox(16)
-		totals.add_child(UIKit.label("+%s SC" % UIKit.fmt_int(int(summary.get("total_sc", 0))), "HeadingLabel", UIKit.AMBER, 54))
+		totals.add_child(UIKit.currency("coin", int(summary.get("total_sc", 0)), UIKit.AMBER, 56, "+"))
 		totals.add_child(UIKit.expander())
-		totals.add_child(UIKit.label("+%d RC" % int(summary.get("total_rc", 0)), "HeadingLabel", UIKit.CRIMSON, 54))
+		totals.add_child(UIKit.currency("core", int(summary.get("total_rc", 0)), UIKit.CRIMSON, 56, "+"))
 		rv.add_child(totals)
 		if not success:
-			rv.add_child(UIKit.label("You keep 30% of the loot you carried and half your combat XP.", "CaptionLabel"))
+			rv.add_child(UIKit.label("You keep 30% of the coins you picked up and half your XP.", "CaptionLabel"))
 		rewards.add_child(rv)
 		col.add_child(rewards)
 		
 		var xp_card := UIKit.card()
 		var xv := UIKit.vbox(14)
 		var xr := UIKit.hbox(12)
-		xr.add_child(UIKit.label("CLR-LV.%02d" % int(summary.get("level_after", 1)), "SubheadLabel"))
+		xr.add_child(UIKit.label("LEVEL %d" % int(summary.get("level_after", 1)), "SubheadLabel"))
 		if int(summary.get("level_after", 1)) > int(summary.get("level_before", 1)):
 			xr.add_child(UIKit.label("LEVEL UP", "SubheadLabel", UIKit.AMBER))
 		xr.add_child(UIKit.expander())
@@ -592,7 +592,7 @@ func show_mission_result(summary: Dictionary) -> void:
 		
 		if int(summary.get("sector_unlocked", 0)) > 0:
 			var unlock := UIKit.card("SuccessCard")
-			unlock.add_child(UIKit.label("SECTOR %02d UNLOCKED" % int(summary["sector_unlocked"]), "SubheadLabel", UIKit.GREEN))
+			unlock.add_child(UIKit.label("SECTOR %d UNLOCKED" % int(summary["sector_unlocked"]), "SubheadLabel", UIKit.GREEN))
 			col.add_child(unlock)
 	
 	var goal: Dictionary = gm.get_next_armory_goal() if gm else {}
@@ -603,9 +603,9 @@ func show_mission_result(summary: Dictionary) -> void:
 		var goal_card := UIKit.card("SuccessCard" if upgrade_ready else "")
 		var text: String
 		if upgrade_ready:
-			text = "UPGRADE READY  ·  %s LV.%d  ·  %s SC" % [goal["name"], int(goal["level"]), UIKit.fmt_int(cost)]
+			text = "Upgrade ready: %s level %d for %s coins" % [goal["name"], int(goal["level"]), UIKit.fmt_int(cost)]
 		else:
-			text = "NEXT  ·  %s LV.%d  ·  %s SC more" % [goal["name"], int(goal["level"]), UIKit.fmt_int(cost - int(gm.survival_coins))]
+			text = "Next upgrade: %s level %d, %s more coins" % [goal["name"], int(goal["level"]), UIKit.fmt_int(cost - int(gm.survival_coins))]
 		goal_card.add_child(UIKit.paragraph(text, UIKit.GREEN if upgrade_ready else UIKit.TEXT_SOFT, 34))
 		col.add_child(goal_card)
 	
@@ -826,7 +826,7 @@ func _on_run_loot_changed(current_sc: int, _current_rc: int) -> void:
 
 func _update_stats() -> void:
 	if _stats_label:
-		_stats_label.text = "%d HP   ·   %d KILLS   ·   +%d SC" % [int(ceil(_hp)), _kills, _run_sc]
+		_stats_label.text = "%d HP   ·   %d KILLS   ·   +%s COINS" % [int(ceil(_hp)), _kills, UIKit.fmt_int(_run_sc)]
 
 
 ## Builds the release HUD on top of the existing nodes (their signals and gameplay
