@@ -92,6 +92,11 @@ func _load_tactical_sector(sector_id: int) -> void:
 			if spawner.has_method("refresh_spawn_points"):
 				spawner.refresh_spawn_points()
 		
+		spawner.spawn_opening(
+			active_sector_node.get_marker_nodes("OpeningMob"),
+			active_sector_node.get_marker_nodes("PickupSpawns")
+		)
+		
 		# Configure lighting via DayNightManager
 		var dnm = get_node_or_null("/root/DayNightManager")
 		if dnm:
@@ -217,10 +222,9 @@ func _on_barricade_broken() -> void:
 	arrow.global_position = Vector3(0.0, 3.2, -14.0)
 
 func _setup_reference_blood_splatters() -> void:
-	if not BloodManager.instance:
+	if not BloodManager.instance or not active_sector_node:
 		return
 	
-	# Atmospheric initial blood decals
-	BloodManager.instance.spawn_splatter(Vector3(2.1, 0.05, 1.8), Vector3.UP, 3.2, true)
-	BloodManager.instance.spawn_splatter(Vector3(1.3, 0.05, 2.2), Vector3.UP, 1.8, false)
-	BloodManager.instance.spawn_splatter(Vector3(-0.8, 0.05, 6.5), Vector3.UP, 2.6, true)
+	# Atmospheric starting blood pools, placed per sector via "BloodDecor" markers
+	for m in active_sector_node.get_marker_nodes("BloodDecor"):
+		BloodManager.instance.spawn_splatter(m.global_position, Vector3.UP, m.get_meta("size", 2.0), m.get_meta("heavy", false))

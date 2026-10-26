@@ -39,8 +39,8 @@ func _ready() -> void:
 	# Apply tactical blue material to all civilian cars
 	_apply_vehicle_materials()
 	
-	# Ensure 5-6 abandoned transit buses exist as tactical chokepoints
-	_ensure_transit_buses()
+	# Buses are placed by hand in each sector scene; make sure each one is solid
+	_ensure_bus_colliders()
 	
 	# Ensure procedural dried grass bushes are scattered across curbs and walls
 	_ensure_procedural_vegetation()
@@ -62,42 +62,35 @@ func _apply_vehicle_materials() -> void:
 					if not ("whl" in m_name or "wheel" in m_name or "windshield" in m_name or "glass" in m_name or "rearwin" in m_name or "sidewin" in m_name):
 						mesh_inst.material_override = mat_car_blue
 
-func _ensure_transit_buses() -> void:
-	var bus_configs = [
-		{"name": "TransitBus_North_2", "pos": Vector3(1.8, 0.0, -31.5), "rot": 15.0},
-		{"name": "TransitBus_East_3", "pos": Vector3(20.5, 0.0, 4.0), "rot": 82.0},
-		{"name": "TransitBus_Mid_4", "pos": Vector3(-2.2, 0.0, -11.0), "rot": -8.0},
-		{"name": "TransitBus_Terrace_5", "pos": Vector3(-14.5, 3.2, -18.0), "rot": 34.0},
-		{"name": "TransitBus_Terminal_6", "pos": Vector3(12.5, 0.0, 29.0), "rot": -55.0}
-	]
-	var props = get_node_or_null("NavigationRegion3D/Props")
-	if not props:
-		props = get_node_or_null("Props")
-	if not props:
-		props = self
-	
-	var bus_scene = load("res://assets/models/props/transit_bus.glb") as PackedScene
-	if not bus_scene:
-		return
-		
-	for cfg in bus_configs:
-		if not find_child(cfg["name"], true, false):
-			var b = bus_scene.instantiate() as Node3D
-			b.name = cfg["name"]
-			b.position = cfg["pos"]
-			b.rotation_degrees.y = cfg["rot"]
-			props.add_child(b)
-			# Box collider
-			var body = StaticBody3D.new()
-			body.name = "Col_" + cfg["name"]
-			body.position = cfg["pos"] + Vector3(0, 1.6, 0)
-			body.rotation_degrees.y = cfg["rot"]
-			var col = CollisionShape3D.new()
-			var box = BoxShape3D.new()
-			box.size = Vector3(3.0, 3.2, 10.5)
-			col.shape = box
-			body.add_child(col)
-			props.add_child(body)
+func _ensure_bus_colliders() -> void:
+	# Box collider fitted to each bus's own meshes, so it matches the model wherever it is placed.
+	for bus in find_children("TransitBus*", "Node3D", true, false):
+		var has_body := false
+		for c in bus.get_children():
+			if c is StaticBody3D:
+				has_body = true
+		if has_body:
+			continue
+		var bounds := AABB()
+		var first := true
+		for mi in bus.find_children("*", "MeshInstance3D", true, false):
+			if not (mi as MeshInstance3D).mesh:
+				continue
+			var local_xform: Transform3D = (bus as Node3D).global_transform.affine_inverse() * (mi as Node3D).global_transform
+			var box: AABB = local_xform * (mi as MeshInstance3D).get_aabb()
+			bounds = box if first else bounds.merge(box)
+			first = false
+		if first:
+			continue
+		var body := StaticBody3D.new()
+		body.name = "BusCollider"
+		var col := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = bounds.size
+		col.shape = shape
+		col.position = bounds.get_center()
+		body.add_child(col)
+		bus.add_child(body)
 
 func _ensure_procedural_vegetation() -> void:
 	if not find_child("ProceduralDriedGrass", true, false):
@@ -135,6 +128,16 @@ func get_spawn_point_nodes() -> Array[Node3D]:
 	var nodes: Array[Node3D] = []
 	if spawn_points_root:
 		for child in spawn_points_root.get_children():
+			if child is Node3D:
+				nodes.append(child)
+	return nodes
+
+## Children of a named marker group in the sector scene (e.g. "OpeningMob", "PickupSpawns", "ObjectiveSpawns").
+func get_marker_nodes(group_name: String) -> Array[Node3D]:
+	var nodes: Array[Node3D] = []
+	var root := get_node_or_null(group_name)
+	if root:
+		for child in root.get_children():
 			if child is Node3D:
 				nodes.append(child)
 	return nodes

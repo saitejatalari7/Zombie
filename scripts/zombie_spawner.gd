@@ -31,23 +31,6 @@ func _ready() -> void:
 	refresh_spawn_points()
 	emit_signal("wave_started", current_wave)
 	emit_signal("zombie_count_changed", alive_zombies, total_kills)
-	
-	# Spawn initial pickup in courtyard
-	call_deferred("_spawn_initial_powerup")
-	
-	# Spawn initial mob down the alleyway (4 shamblers, 1 runner)
-	# Positioned down the street (z: -12 to -18) to allow player tactical breathing room
-	for i in range(5):
-		var scene_to_spawn := (runner_scene if i == 4 else zombie_scene)
-		var z: Zombie = scene_to_spawn.instantiate()
-		get_parent().call_deferred("add_child", z)
-		var spawn_z := randf_range(-12.0, -18.0)
-		var spawn_x := randf_range(-2.2, 2.2)
-		z.position = Vector3(spawn_x, 0, spawn_z)
-		z.died.connect(_on_zombie_died)
-		alive_zombies += 1
-	
-	emit_signal("zombie_count_changed", alive_zombies, total_kills)
 
 func refresh_spawn_points() -> void:
 	street_spawn_points.clear()
@@ -68,14 +51,23 @@ func refresh_spawn_points() -> void:
 	if building_spawn_points.is_empty() and not spawn_points.is_empty():
 		building_spawn_points = [spawn_points[0]]
 
-func _spawn_initial_powerup() -> void:
-	var p1: Node3D = powerup_scene.instantiate()
-	get_parent().add_child(p1)
-	p1.global_position = Vector3(-6.0, 0.0, 1.5)
+## Spawns the sector's opening mob and starting pickups from its scene markers.
+## Markers with "runner" in their name spawn a runner, others a shambler.
+func spawn_opening(mob_points: Array[Node3D], pickup_points: Array[Node3D]) -> void:
+	for pt in mob_points:
+		var scene_to_spawn := runner_scene if "runner" in pt.name.to_lower() else zombie_scene
+		var z: Zombie = scene_to_spawn.instantiate()
+		get_parent().add_child(z)
+		z.global_position = pt.global_position
+		z.died.connect(_on_zombie_died)
+		alive_zombies += 1
 	
-	var p2: Node3D = powerup_scene.instantiate()
-	get_parent().add_child(p2)
-	p2.global_position = Vector3(0.0, 2.9, -28.0)
+	for pt in pickup_points:
+		var p: Node3D = powerup_scene.instantiate()
+		get_parent().add_child(p)
+		p.global_position = pt.global_position
+	
+	emit_signal("zombie_count_changed", alive_zombies, total_kills)
 
 func setup_player(p_player: Player) -> void:
 	player = p_player
