@@ -95,51 +95,8 @@ const SCENE_CARBINE = preload("res://assets/models/weapons/assault_carbine.glb")
 const SCENE_SHOTGUN = preload("res://assets/models/weapons/tactical_shotgun.glb")
 const SCENE_SMG = preload("res://assets/models/weapons/high_caliber_smg.glb")
 
-# ─── Canonical Skill Data (Design Doc Section 5) ──────────────────────────────
-const SKILLS_DATA: Dictionary = {
-	"blood_siphon": {
-		"name": "BLOOD SIPHON",
-		"pair": "crimson_berserker",
-		"desc": "+25% Fire Rate when standing in fresh blood pools.",
-		"cost_rc": 5,
-		"level_req": 2,
-	},
-	"hemorrhage_rounds": {
-		"name": "HEMORRHAGE ROUNDS",
-		"pair": "crimson_berserker",
-		"desc": "Zombies burst into 2x wider blood pools on death.",
-		"cost_rc": 5,
-		"level_req": 4,
-	},
-	"napalm_gel": {
-		"name": "NAPALM GEL",
-		"pair": "tactical_demolisher",
-		"desc": "Molotov fire burns 50% longer & slows targets by 40%.",
-		"cost_rc": 10,
-		"level_req": 6,
-	},
-	"thermobaric_ignition": {
-		"name": "THERMOBARIC IGNITION",
-		"pair": "tactical_demolisher",
-		"desc": "Shooting burning hostiles triggers concussive blasts.",
-		"cost_rc": 10,
-		"level_req": 8,
-	},
-	"silent_treads": {
-		"name": "SILENT TREADS",
-		"pair": "ghost_operative",
-		"desc": "Walking in blood leaves no scent tracks for Runners.",
-		"cost_rc": 15,
-		"level_req": 12,
-	},
-	"strobe_torch": {
-		"name": "STROBE TORCH",
-		"pair": "ghost_operative",
-		"desc": "In Night Ops, flashlight cone periodically stuns zombies.",
-		"cost_rc": 15,
-		"level_req": 15,
-	},
-}
+# Skill definitions live in GameManager (shared with save refunds)
+@onready var skills_data: Dictionary = GameManager.SKILLS_DATA
 
 # ─── Lifecycle ─────────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -167,12 +124,57 @@ func _ready() -> void:
 		om.orientation_changed.connect(_on_orientation_changed)
 		_apply_responsive_layout(om.is_portrait)
 	
+	_lock_unreleased_content()
+	
 	# Initial UI refresh
 	switch_tab(Tab.COMMAND_BOARD)
 	select_sector(1)
 	select_weapon("assault_carbine")
 	_refresh_top_bar()
 	_refresh_base_upgrades()
+
+
+## Weapons and skills that don't work in a run yet can't be selected or bought.
+func _lock_unreleased_content() -> void:
+	var weapon_buttons := {
+		"tactical_shotgun": weapon_shotgun_btn,
+		"high_caliber_smg": weapon_smg_btn,
+	}
+	for weapon_id in weapon_buttons:
+		var btn: Button = weapon_buttons[weapon_id]
+		if btn and weapon_id not in GameManager.IMPLEMENTED_WEAPONS:
+			btn.disabled = true
+			btn.text += "\nIN DEVELOPMENT"
+	if btn_tab_skills:
+		btn_tab_skills.visible = not GameManager.IMPLEMENTED_SKILLS.is_empty()
+	
+	var gm = get_node_or_null("/root/GameManager")
+	if gm and (gm.pending_refund_sc > 0 or gm.pending_refund_rc > 0):
+		_show_toast("REFUNDED %d SC + %d RC for gear still in development" % [gm.pending_refund_sc, gm.pending_refund_rc])
+		gm.pending_refund_sc = 0
+		gm.pending_refund_rc = 0
+
+
+func _show_toast(text: String) -> void:
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.0))
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.067, 0.067, 0.075, 0.95)
+	bg.set_content_margin_all(14)
+	label.add_theme_stylebox_override("normal", bg)
+	label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	label.offset_left = -300.0
+	label.offset_right = 300.0
+	label.offset_top = 140.0
+	add_child(label)
+	var tween := create_tween()
+	tween.tween_interval(4.0)
+	tween.tween_property(label, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(label.queue_free)
 
 
 func _process(delta: float) -> void:
@@ -266,6 +268,8 @@ func select_sector(sector_id: int, contract_index: int = 0) -> void:
 	var max_sec: int = gm.highest_sector_unlocked if gm else 1
 	if sector_id > max_sec:
 		return  # Locked
+	if gm and not gm.is_sector_playable(sector_id):
+		return  # Classified: map not built yet
 	
 	selected_sector = sector_id
 	selected_contract_index = contract_index
@@ -302,10 +306,15 @@ func _refresh_sector_locks() -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	var max_sec: int = gm.highest_sector_unlocked if gm else 1
 	
-	if sector_1_btn: sector_1_btn.disabled = (1 > max_sec)
-	if sector_2_btn: sector_2_btn.disabled = (2 > max_sec)
-	if sector_3_btn: sector_3_btn.disabled = (3 > max_sec)
-	if sector_4_btn: sector_4_btn.disabled = (4 > max_sec)
+	var buttons := [sector_1_btn, sector_2_btn, sector_3_btn, sector_4_btn]
+	for i in range(buttons.size()):
+		var btn: Button = buttons[i]
+		if not btn:
+			continue
+		var sector_id := i + 1
+		var playable: bool = gm.is_sector_playable(sector_id) if gm else sector_id == 1
+		btn.disabled = (sector_id > max_sec) or not playable
+		btn.text = "SEC-%02d" % sector_id if playable else "SEC-%02d\nCLASSIFIED" % sector_id
 	
 	if sector_1_btn: sector_1_btn.modulate = Color(1, 0.2, 0.2) if selected_sector == 1 else Color(1, 1, 1)
 	if sector_2_btn: sector_2_btn.modulate = Color(1, 0.2, 0.2) if selected_sector == 2 else Color(1, 1, 1)
@@ -426,8 +435,10 @@ func _build_skill_matrix_ui() -> void:
 	for child in skill_matrix_container.get_children():
 		child.queue_free()
 	
-	for skill_id in SKILLS_DATA:
-		var data: Dictionary = SKILLS_DATA[skill_id]
+	for skill_id in skills_data:
+		if skill_id not in GameManager.IMPLEMENTED_SKILLS:
+			continue
+		var data: Dictionary = skills_data[skill_id]
 		
 		var card := PanelContainer.new()
 		card.custom_minimum_size = Vector2(280, 110)
@@ -467,8 +478,8 @@ func _refresh_skills_ui() -> void:
 	
 	# Update top 2 equipped slots
 	var eq: Array[String] = gm.get_equipped_skills()
-	var s0_name: String = SKILLS_DATA[eq[0]]["name"] if SKILLS_DATA.has(eq[0]) else (eq[0].to_upper() if eq[0] != "" else "[ EMPTY ]")
-	var s1_name: String = SKILLS_DATA[eq[1]]["name"] if SKILLS_DATA.has(eq[1]) else (eq[1].to_upper() if eq[1] != "" else "[ EMPTY ]")
+	var s0_name: String = skills_data[eq[0]]["name"] if skills_data.has(eq[0]) else (eq[0].to_upper() if eq[0] != "" else "[ EMPTY ]")
+	var s1_name: String = skills_data[eq[1]]["name"] if skills_data.has(eq[1]) else (eq[1].to_upper() if eq[1] != "" else "[ EMPTY ]")
 	equipped_slot_0_btn.text = "SLOT 1: %s" % s0_name
 	equipped_slot_1_btn.text = "SLOT 2: %s" % s1_name
 	
@@ -493,7 +504,7 @@ func _refresh_skills_ui() -> void:
 	# Update all skill cards
 	for card in skill_matrix_container.get_children():
 		var skill_id: String = card.get_meta("skill_id")
-		var data: Dictionary = SKILLS_DATA[skill_id]
+		var data: Dictionary = skills_data[skill_id]
 		var btn: Button = card.find_child("ActionBtn")
 		if not btn: continue
 		
@@ -542,7 +553,7 @@ func _on_skill_action_pressed(skill_id: String) -> void:
 			gm.equip_skill(1, skill_id)
 	else:
 		# Unlock with RC
-		var cost: int = SKILLS_DATA[skill_id]["cost_rc"]
+		var cost: int = skills_data[skill_id]["cost_rc"]
 		if gm.spend_research_cores(cost):
 			gm.unlock_skill(skill_id)
 			if eq[0] == "":
@@ -566,9 +577,9 @@ func _refresh_base_upgrades() -> void:
 	var medbay_lv: int = gm.get_outpost_level("medbay")
 	var helipad_lv: int = gm.get_outpost_level("helipad")
 	
-	comms_level_label.text = "COMMS ARRAY // TIER %d/5\n+15%% Contract Payouts & Threat Scans" % comms_lv
-	medbay_level_label.text = "FIELD MEDBAY // TIER %d/5\n+20 Starting Armor & Emergency Stim" % medbay_lv
-	helipad_level_label.text = "TACTICAL HELIPAD // TIER %d/5\n-3s Evac Timer & Flare Reinforcements" % helipad_lv
+	comms_level_label.text = "COMMS ARRAY // TIER %d/5\n+15%% Contract Payouts per tier" % comms_lv
+	medbay_level_label.text = "FIELD MEDBAY // TIER %d/5\n+20 Starting Health per tier" % medbay_lv
+	helipad_level_label.text = "TACTICAL HELIPAD // TIER %d/5\n-3s Evac Hold per tier (now %ds)" % [helipad_lv, int(gm.get_evac_hold_time())]
 	
 	_setup_base_upgrade_btn(comms_upgrade_btn, comms_lv, gm.survival_coins, gm.research_cores)
 	_setup_base_upgrade_btn(medbay_upgrade_btn, medbay_lv, gm.survival_coins, gm.research_cores)

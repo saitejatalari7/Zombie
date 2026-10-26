@@ -103,12 +103,64 @@ const CONTRACTS: Dictionary = {
 	],
 }
 
+## Paired operative skills (Design Doc Section 5)
+const SKILLS_DATA: Dictionary = {
+	"blood_siphon": {
+		"name": "BLOOD SIPHON",
+		"pair": "crimson_berserker",
+		"desc": "+25% Fire Rate when standing in fresh blood pools.",
+		"cost_rc": 5,
+		"level_req": 2,
+	},
+	"hemorrhage_rounds": {
+		"name": "HEMORRHAGE ROUNDS",
+		"pair": "crimson_berserker",
+		"desc": "Zombies burst into 2x wider blood pools on death.",
+		"cost_rc": 5,
+		"level_req": 4,
+	},
+	"napalm_gel": {
+		"name": "NAPALM GEL",
+		"pair": "tactical_demolisher",
+		"desc": "Molotov fire burns 50% longer & slows targets by 40%.",
+		"cost_rc": 10,
+		"level_req": 6,
+	},
+	"thermobaric_ignition": {
+		"name": "THERMOBARIC IGNITION",
+		"pair": "tactical_demolisher",
+		"desc": "Shooting burning hostiles triggers concussive blasts.",
+		"cost_rc": 10,
+		"level_req": 8,
+	},
+	"silent_treads": {
+		"name": "SILENT TREADS",
+		"pair": "ghost_operative",
+		"desc": "Walking in blood leaves no scent tracks for Runners.",
+		"cost_rc": 15,
+		"level_req": 12,
+	},
+	"strobe_torch": {
+		"name": "STROBE TORCH",
+		"pair": "ghost_operative",
+		"desc": "In Night Ops, flashlight cone periodically stuns zombies.",
+		"cost_rc": 15,
+		"level_req": 15,
+	},
+}
+
+## Content that actually works in a run. Everything else shows as "in development"
+## in the hub and can't be bought; anything bought before this existed is refunded on load.
+const PLAYABLE_SECTORS: Array[int] = [1]
+const IMPLEMENTED_WEAPONS: Array[String] = ["assault_carbine"]
+const IMPLEMENTED_SKILLS: Array[String] = []
+const WEAPON_UPGRADE_COST_STEP := 150  # Tier N costs N * 150 SC (matches the Armory)
+
 ## Per-kill bounty (SC, unbanked until extraction) and XP.
 const KILL_REWARDS: Dictionary = {
 	"shambler": {"sc": 1, "xp": 2},
 	"runner": {"sc": 5, "xp": 4},
 	"tank": {"sc": 25, "xp": 15},
-	"crimson_boss": {"sc": 100, "xp": 50},
 }
 
 ## Clearance level each Sector unlocks at (index = sector id).
@@ -201,16 +253,20 @@ var in_run_kills: Dictionary = {
 	"shambler": 0,
 	"runner": 0,
 	"tank": 0,
-	"crimson_boss": 0
 }
 ## True between start_mission_run() and complete/fail/abandon. Guards against double payouts.
 var run_active: bool = false
 var last_mission_summary: Dictionary = {}
+## Set by load_game() when purchases of unreleased content were refunded; the hub shows it once.
+var pending_refund_sc: int = 0
+var pending_refund_rc: int = 0
 
 # ─── Lifecycle ─────────────────────────────────────────────────────────────────
 func _ready() -> void:
 	_init_default_upgrades()
 	load_game()
+	if pending_refund_sc > 0 or pending_refund_rc > 0:
+		save_game()
 	_apply_loaded_settings()
 	print("[GameManager] Ready — Clearance Lv.%d | Vault SC: %d | Vault RC: %d" % [
 		clearance_level, survival_coins, research_cores
@@ -718,7 +774,32 @@ func load_game() -> void:
 	total_missions_completed = _read_int(config, "stats", "total_missions_completed", 0, 0, 999999999)
 	total_extractions = _read_int(config, "stats", "total_extractions", 0, 0, 999999999)
 
+	_refund_unreleased_purchases()
 	game_loaded.emit()
+
+
+func is_sector_playable(sector_id: int) -> bool:
+	return sector_id in PLAYABLE_SECTORS
+
+
+func _refund_unreleased_purchases() -> void:
+	for weapon_id in WEAPON_IDS:
+		if weapon_id in IMPLEMENTED_WEAPONS:
+			continue
+		for track in UPGRADE_TRACKS:
+			var lv: int = weapon_upgrades[weapon_id][track]
+			if lv > 0:
+				pending_refund_sc += int(WEAPON_UPGRADE_COST_STEP * lv * (lv + 1) * 0.5)
+				weapon_upgrades[weapon_id][track] = 0
+	for skill_id in unlocked_skills.keys():
+		if skill_id not in IMPLEMENTED_SKILLS:
+			pending_refund_rc += int(SKILLS_DATA.get(skill_id, {}).get("cost_rc", 0))
+			unlocked_skills.erase(skill_id)
+	for slot in range(2):
+		if not is_skill_unlocked(equipped_skills[slot]):
+			equipped_skills[slot] = ""
+	survival_coins += pending_refund_sc
+	research_cores += pending_refund_rc
 
 
 func _try_load_config(path: String) -> ConfigFile:
