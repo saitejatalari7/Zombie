@@ -98,7 +98,9 @@ func _on_hit_zombie(zombie: Node3D, hit_pos: Vector3) -> void:
 	hit_entities.append(zombie)
 	
 	var final_damage := damage * (2.0 if is_crit else 1.0)
-	var knockback_force := direction * (35.0 if is_hyper_burst else 22.0)
+	# A punch, not a throw: ~1 m of shove (22 used to fling a body ~12 m, so with aim that
+	# lands every shot the horde could never reach the player)
+	var knockback_force := direction * (10.0 if is_hyper_burst else 6.5)
 	
 	if zombie.has_method("take_damage"):
 		zombie.take_damage(final_damage, knockback_force)

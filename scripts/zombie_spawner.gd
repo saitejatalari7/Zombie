@@ -31,6 +31,12 @@ var evac_frenzy: bool = false
 ## Extra runner share and how early heavies appear; raised per sector by configure_for_sector
 var runner_bonus: float = 0.0
 var tank_wave: int = 2
+## Zombie toughness. One rifle round is 120 damage: at x1 every zombie died to a single
+## hit and the horde never reached a player who stood still, so bodies take 2+ hits.
+const BASE_HEALTH_MULT := 6.0
+const AROUND_PLAYER_SHARE := 0.6
+var health_mult: float = BASE_HEALTH_MULT
+var pack_size: int = 2
 
 ## Each sector pushes harder: more runners, a bigger horde, heavies from the first wave.
 func configure_for_sector(sector_id: int) -> void:
@@ -39,6 +45,13 @@ func configure_for_sector(sector_id: int) -> void:
 	max_active_zombies += 2 * tier
 	spawn_interval = maxf(0.9, spawn_interval - 0.12 * float(tier))
 	tank_wave = 1 if tier >= 1 else 2
+	health_mult = BASE_HEALTH_MULT * (1.0 + 0.1 * float(tier))
+	pack_size = 3 + mini(tier, 2)
+
+
+## Every zombie this spawner makes gets the sector's toughness before it enters the tree.
+func _toughen(z: Zombie) -> void:
+	z.max_health *= health_mult
 
 func _ready() -> void:
 	refresh_spawn_points()
@@ -70,6 +83,7 @@ func spawn_opening(mob_points: Array[Node3D], pickup_points: Array[Node3D]) -> v
 	for pt in mob_points:
 		var scene_to_spawn := runner_scene if "runner" in pt.name.to_lower() else zombie_scene
 		var z: Zombie = scene_to_spawn.instantiate()
+		_toughen(z)
 		get_parent().add_child(z)
 		z.global_position = pt.global_position
 		z.died.connect(_on_zombie_died)
@@ -99,17 +113,22 @@ func _process(delta: float) -> void:
 		
 	timer += delta
 	var frenzy := is_frenzy or evac_frenzy
-	var active_interval := (0.7 if frenzy else spawn_interval)
+	# The horde comes in packs that arrive together (one at a time, auto-fire never let a
+	# zombie reach the player). Same average rate: the interval stretches with the pack.
+	var pack := pack_size + (1 if frenzy else 0)
+	var active_interval := (0.7 if frenzy else spawn_interval) * float(pack) * 0.8
 	if timer >= active_interval:
 		timer = 0.0
 		var limit := (26 if frenzy else max_active_zombies)
-		if alive_zombies < limit:
-			var batch := (2 if frenzy else 1)
-			for i in range(batch):
-				if alive_zombies < limit:
-					spawn_single_zombie()
+		var base: Variant = null
+		if is_instance_valid(player) and FlowField.instance and randf() < AROUND_PLAYER_SHARE:
+			base = FlowField.instance.flank_point(player.global_position, 16.0, 22.0)
+		for i in range(pack):
+			if alive_zombies < limit:
+				spawn_single_zombie(base)
 
-func spawn_single_zombie() -> void:
+## base: where the pack gathers (null: a layout spawn marker).
+func spawn_single_zombie(base: Variant = null) -> void:
 	if spawn_points.is_empty():
 		return
 		
@@ -139,19 +158,29 @@ func spawn_single_zombie() -> void:
 		scene_to_spawn = zombie_scene
 		
 	var z: Zombie = scene_to_spawn.instantiate()
+	_toughen(z)
 	get_parent().add_child(z)
 	
-	# Jitter position slightly
-	var offset := Vector3(randf_range(-0.8, 0.8), 0, randf_range(-0.8, 0.8))
-	z.global_position = pt.global_position + offset
+	# Most packs close in around the player (reachable floor 16-22 m out, any side); the
+	# rest come out of the layout's doorways and alleys.
+	var spawn_pos: Vector3 = pt.global_position
+	if base != null:
+		spawn_pos = base
+	z.global_position = spawn_pos + Vector3(randf_range(-1.2, 1.2), 0, randf_range(-1.2, 1.2))
 	z.died.connect(_on_zombie_died)
 	
 	alive_zombies += 1
 	emit_signal("zombie_count_changed", alive_zombies, total_kills)
 
 ## Spawns one shambler at a world position (used by nests and scripted events).
-func spawn_zombie_at(pos: Vector3) -> void:
-	var z: Zombie = zombie_scene.instantiate()
+func spawn_zombie_at(pos: Vector3, kind: String = "shambler") -> void:
+	var scene := zombie_scene
+	if kind == "runner":
+		scene = runner_scene
+	elif kind == "tank":
+		scene = tank_scene
+	var z: Zombie = scene.instantiate()
+	_toughen(z)
 	get_parent().add_child(z)
 	z.global_position = pos
 	z.died.connect(_on_zombie_died)

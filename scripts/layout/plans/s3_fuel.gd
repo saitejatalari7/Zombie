@@ -1055,6 +1055,38 @@ const PLAN := {
 				0.3,
 				-7.0
 			]
+		],
+		"HiveSites": [
+			[
+				36.25,
+				0.0,
+				-32.75
+			],
+			[
+				10.25,
+				0.0,
+				10.25
+			],
+			[
+				-14.75,
+				0.0,
+				-33.75
+			],
+			[
+				-43.75,
+				0.0,
+				-21.75
+			],
+			[
+				37.25,
+				0.0,
+				-2.75
+			],
+			[
+				-14.75,
+				0.0,
+				-4.75
+			]
 		]
 	},
 	"marker_names": {
@@ -1098,6 +1130,14 @@ const PLAN := {
 			"IntelTankLog",
 			"IntelControlRoom",
 			"IntelJetty"
+		],
+		"HiveSites": [
+			"HiveL_1",
+			"HiveL_2",
+			"HiveM_3",
+			"HiveM_4",
+			"HiveS_5",
+			"HiveL_6"
 		]
 	},
 	"nav": {

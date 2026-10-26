@@ -10,12 +10,14 @@ signal molotov_ammo_changed(current: int, max_val: int)
 signal vault_state_changed(can_vault: bool)
 signal auto_fire_toggled(enabled: bool)
 signal died()
+## Rounds left, magazine size, and reload progress (0 = not reloading, else 0..1 done)
+signal ammo_changed(ammo: int, mag: int, reload_progress: float)
 
 @export var move_speed: float = 5.4
 @export var rifle_fire_rate: float = 0.11
 @export var rifle_damage: float = 34.0
 @export var super_blast_cooldown_time: float = 4.5
-@export var auto_shoot_radius: float = 8.5 # Strict engagement radius (does not react outside this radius)
+@export var auto_shoot_radius: float = 7.5 # Strict engagement radius (does not react outside this radius)
 @export var bullet_count: int = 1 # Initial single-bullet firing (upgraded via hyper-burst or power-ups)
 
 var range_ring: MeshInstance3D = null
@@ -27,6 +29,14 @@ var is_dead: bool = false
 
 var can_fire_rifle: bool = true
 var fire_timer: float = 0.0
+# Magazine: the reload is the window hives and their defenders get to close in
+const BASE_MAG_SIZE := 30
+const RELOAD_TIME := 1.6
+const IDLE_RELOAD_DELAY := 1.2   # nothing to shoot for this long and the mag is half empty: top up
+var mag_size: int = BASE_MAG_SIZE
+var mag_ammo: int = BASE_MAG_SIZE
+var reload_timer: float = 0.0
+var _idle_fire_time: float = 0.0
 var super_blast_timer: float = 0.0
 
 # Auto-fire and Twin-stick aiming
@@ -353,9 +363,11 @@ func _apply_armory_upgrades() -> void:
 	var pen_lv: int = gm.get_weapon_upgrade_level(active_w, "penetration")
 	var crit_lv: int = gm.get_weapon_upgrade_level(active_w, "crit_autoaim")
 	
-	rifle_damage = 34.0 * (1.0 + float(dmg_lv) * 0.12)
+	rifle_damage = 120.0 * (1.0 + float(dmg_lv) * 0.12)  # per round (the bullet used to ignore this)
 	bonus_knockback = 1.0 + float(dmg_lv) * 0.15
 	rifle_fire_rate = maxf(0.06, 0.11 * (1.0 - float(rate_lv) * 0.04))
+	mag_size = BASE_MAG_SIZE + 3 * rate_lv  # Extended Drum: +3 rounds per level
+	mag_ammo = mag_size
 	base_penetration = 1 + pen_lv
 	crit_chance = clampf(float(crit_lv) * 0.12, 0.0, 0.60)
 
@@ -368,6 +380,7 @@ func _physics_process(delta: float) -> void:
 		fire_timer -= delta
 		if fire_timer <= 0.0:
 			can_fire_rifle = true
+	_tick_reload(delta)
 	
 	if shoulder_charge_timer > 0.0:
 		shoulder_charge_timer = maxf(0.0, shoulder_charge_timer - delta)
@@ -561,8 +574,32 @@ func _physics_process(delta: float) -> void:
 		global_position.z = clampf(global_position.z, sector_bounds.position.y, sector_bounds.end.y)
 	
 	# Check firing
-	if is_firing and can_fire_rifle:
+	if is_firing and can_fire_rifle and reload_timer <= 0.0:
 		fire_rifle(nearest_target)
+		_idle_fire_time = 0.0
+	else:
+		_idle_fire_time += delta
+		if reload_timer <= 0.0 and _idle_fire_time > IDLE_RELOAD_DELAY and mag_ammo < mag_size / 2:
+			_start_reload()
+
+
+func _start_reload() -> void:
+	if reload_timer > 0.0:
+		return
+	reload_timer = RELOAD_TIME
+	ammo_changed.emit(mag_ammo, mag_size, 0.001)
+
+
+func _tick_reload(delta: float) -> void:
+	if reload_timer <= 0.0:
+		return
+	reload_timer -= delta
+	if reload_timer <= 0.0:
+		reload_timer = 0.0
+		mag_ammo = mag_size
+		ammo_changed.emit(mag_ammo, mag_size, 0.0)
+	else:
+		ammo_changed.emit(mag_ammo, mag_size, 1.0 - reload_timer / RELOAD_TIME)
 
 func _check_vault_opportunity() -> void:
 	if is_vaulting:
@@ -756,6 +793,11 @@ func fire_rifle(_primary_target: Node3D = null) -> void:
 	if has_blood_siphon and in_blood:
 		effective_fire_rate *= SIPHON_FIRE_RATE_MULT
 	fire_timer = effective_fire_rate
+	if not is_hyper_burst:  # overdrive rounds are free
+		mag_ammo -= 1
+		ammo_changed.emit(mag_ammo, mag_size, 0.0)
+		if mag_ammo <= 0:
+			_start_reload()
 	
 	# Reusable Muzzle flash
 	if active_muzzle_flash:
@@ -788,6 +830,7 @@ func fire_rifle(_primary_target: Node3D = null) -> void:
 		var is_crit: bool = (randf() < crit_chance) or is_hyper_burst
 		
 		var bullet: Node3D = bullet_projectile_scene.instantiate()
+		bullet.set("damage", rifle_damage)
 		get_parent().add_child(bullet)
 		bullet.init(spawn_pos, bullet_dir, _primary_target, pen, is_hyper_burst, is_crit,
 			global_position + Vector3(0.0, spawn_pos.y - global_position.y, 0.0), self)

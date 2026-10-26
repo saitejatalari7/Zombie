@@ -1022,6 +1022,38 @@ const PLAN := {
 				4.3,
 				-38.5
 			]
+		],
+		"HiveSites": [
+			[
+				-13.75,
+				4.0,
+				-32.75
+			],
+			[
+				36.25,
+				0.0,
+				-12.75
+			],
+			[
+				-37.75,
+				0.0,
+				3.25
+			],
+			[
+				5.25,
+				0.0,
+				-7.75
+			],
+			[
+				18.25,
+				4.0,
+				-38.75
+			],
+			[
+				24.25,
+				0.0,
+				8.25
+			]
 		]
 	},
 	"marker_names": {
@@ -1064,6 +1096,14 @@ const PLAN := {
 			"IntelGuardLog",
 			"IntelMotorPool",
 			"IntelPodium"
+		],
+		"HiveSites": [
+			"HiveL_1",
+			"HiveL_2",
+			"HiveM_3",
+			"HiveM_4",
+			"HiveS_5",
+			"HiveS_6"
 		]
 	},
 	"nav": {

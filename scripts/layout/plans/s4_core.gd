@@ -1097,6 +1097,38 @@ const PLAN := {
 				6.3,
 				-48.0
 			]
+		],
+		"HiveSites": [
+			[
+				40.25,
+				6.0,
+				-31.75
+			],
+			[
+				-26.75,
+				0.0,
+				-20.75
+			],
+			[
+				31.25,
+				0.0,
+				3.25
+			],
+			[
+				7.25,
+				0.0,
+				-21.75
+			],
+			[
+				-42.75,
+				0.0,
+				4.25
+			],
+			[
+				-9.75,
+				0.0,
+				-1.75
+			]
 		]
 	},
 	"marker_names": {
@@ -1141,6 +1173,14 @@ const PLAN := {
 			"IntelCryoWest",
 			"IntelCryoEast",
 			"IntelRoofDeck"
+		],
+		"HiveSites": [
+			"HiveL_1",
+			"HiveL_2",
+			"HiveM_3",
+			"HiveM_4",
+			"HiveS_5",
+			"HiveL_6"
 		]
 	},
 	"nav": {

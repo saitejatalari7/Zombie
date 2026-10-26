@@ -1296,6 +1296,38 @@ const PLAN := {
 				0.3,
 				16.5
 			]
+		],
+		"HiveSites": [
+			[
+				52.25,
+				0.0,
+				5.25
+			],
+			[
+				-1.75,
+				4.0,
+				-24.75
+			],
+			[
+				16.25,
+				0.0,
+				6.25
+			],
+			[
+				34.25,
+				4.0,
+				-25.75
+			],
+			[
+				-16.75,
+				0.0,
+				7.25
+			],
+			[
+				-37.75,
+				0.0,
+				-12.75
+			]
 		]
 	},
 	"marker_names": {
@@ -1339,6 +1371,14 @@ const PLAN := {
 			"IntelPumpHouse",
 			"IntelSignalBox",
 			"IntelEastYard"
+		],
+		"HiveSites": [
+			"HiveL_1",
+			"HiveL_2",
+			"HiveM_3",
+			"HiveM_4",
+			"HiveS_5",
+			"HiveS_6"
 		]
 	},
 	"nav": {

@@ -1205,6 +1205,38 @@ const PLAN := {
 				0.7,
 				-38.5
 			]
+		],
+		"HiveSites": [
+			[
+				26.25,
+				0.0,
+				-6.75
+			],
+			[
+				-30.75,
+				0.0,
+				7.25
+			],
+			[
+				-11.75,
+				0.4,
+				-37.75
+			],
+			[
+				20.25,
+				0.4,
+				-37.75
+			],
+			[
+				-32.75,
+				0.4,
+				-19.75
+			],
+			[
+				0.25,
+				0.0,
+				4.25
+			]
 		]
 	},
 	"marker_names": {
@@ -1248,6 +1280,14 @@ const PLAN := {
 			"IntelTicketDesk",
 			"IntelBusDepot",
 			"IntelSignalRoom"
+		],
+		"HiveSites": [
+			"HiveL_1",
+			"HiveL_2",
+			"HiveM_3",
+			"HiveM_4",
+			"HiveS_5",
+			"HiveS_6"
 		]
 	},
 	"nav": {

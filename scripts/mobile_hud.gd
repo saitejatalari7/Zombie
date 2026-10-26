@@ -73,6 +73,9 @@ var _pause_layer: Control = null
 var _abandon_armed: bool = false
 var _abandon_btn: Button = null
 var _top_col: VBoxContainer = null
+var _auto_on: bool = true
+var _ammo: int = 30
+var _reloading: bool = false
 
 func _process(delta: float) -> void:
 	# Continuous mouse raycast targeting while special aiming on PC
@@ -170,16 +173,28 @@ func _on_auto_fire_pressed() -> void:
 		_update_auto_fire_ui(state)
 
 func _update_auto_fire_ui(enabled: bool) -> void:
+	_auto_on = enabled
 	if _fire_skin:
-		_fire_skin.text = "AUTO" if enabled else "FIRE"
 		_fire_skin.fill = UIKit.CRIMSON if enabled else Color(UIKit.CRIMSON_DARK, 0.92)
-	if auto_fire_btn:
-		if enabled:
-			auto_fire_btn.text = "AUTO: ON"
-			auto_fire_btn.modulate = Color(1.0, 0.15, 0.25, 1.0)
-		else:
-			auto_fire_btn.text = "AUTO: OFF"
-			auto_fire_btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_refresh_fire_text()
+
+
+## Fire button text: "AUTO 24" / "FIRE 24", or RELOAD with a sweep while reloading.
+func _on_ammo_changed(ammo: int, _mag: int, reload_progress: float) -> void:
+	_ammo = ammo
+	_reloading = reload_progress > 0.0
+	if _fire_skin:
+		_fire_skin.cooldown = (1.0 - reload_progress) if _reloading else 0.0
+	_refresh_fire_text()
+
+
+func _refresh_fire_text() -> void:
+	if not _fire_skin:
+		return
+	if _reloading:
+		_fire_skin.text = "RELOAD"
+	else:
+		_fire_skin.text = "%s %d" % ["AUTO" if _auto_on else "FIRE", _ammo]
 
 func _on_fire_gui_input(event: InputEvent) -> void:
 	# Twin-Stick Manual Drag-Aim sweep on Fire Button (Design Doc 6.3)
@@ -283,6 +298,8 @@ func setup(p_player: Player, p_spawner: ZombieSpawner) -> void:
 		player.molotov_ammo_changed.connect(_on_molotov_ammo_changed)
 		player.vault_state_changed.connect(_on_vault_state_changed)
 		player.auto_fire_toggled.connect(_update_auto_fire_ui)
+		player.ammo_changed.connect(_on_ammo_changed)
+		_ammo = player.mag_ammo
 		_on_health_changed(player.current_health, player.max_health)
 		_on_molotov_ammo_changed(player.molotov_ammo, player.max_molotov_ammo)
 		_on_vault_state_changed(player.can_vault)

@@ -44,8 +44,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, this is Overwatch. The block's evac beacon is dead and nothing can land. Get it lit.",
 			"steps": [
-				{"type": "kill", "count": 12, "title": "CLEAR THE AVENUE",
-					"radio": "The avenue is crawling. Thin them out before you push north."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "Thermal shows hives in the block. They keep birthing the dead until they burst. Find them, and keep shooting."},
 				{"type": "destroy", "marker": "NestWestPlaza", "title": "BURN OUT THE NEST",
 					"radio": "Thermal shows a nest in the West Plaza. It keeps birthing them. Put it down."},
 				{"type": "search", "marker": "DepotFuse", "seconds": 4.0, "title": "PULL THE BEACON FUSE",
@@ -68,6 +68,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. The medevac pilot didn't make it, but his recorder might tell us what he was carrying.",
 			"steps": [
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "Thermal shows hives in the block. They keep birthing the dead until they burst. Find them, and keep shooting."},
 				{"type": "search", "marker": "ClinicKeycard", "seconds": 3.0, "title": "FIND THE PILOT'S KEYCARD",
 					"radio": "The pilot crawled into the clinic on the avenue. Search it for his keycard."},
 				{"type": "carry", "marker": "RecorderCase", "title": "TAKE THE FLIGHT RECORDER",
@@ -90,8 +92,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. The market square was the last aid station in this block. Whatever they knew is in that hall.",
 			"steps": [
-				{"type": "kill", "count": 10, "title": "CLEAR THE SQUARE",
-					"radio": "The square's overrun. Clear some room to work."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "Thermal shows hives in the block. They keep birthing the dead until they burst. Find them, and keep shooting."},
 				{"type": "search", "marker": "StallLedger", "seconds": 4.0, "title": "FIND THE SUPPLY LEDGER",
 					"radio": "The ledger is in the market hall, west side of the square. It has two doors, use either."},
 				{"type": "destroy", "marker": "StreetNest", "title": "BURN OUT THE NEST",
@@ -116,8 +118,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. They're coming up out of the storm tunnels. Drown the tunnels and we cut this block's supply of dead in half.",
 			"steps": [
-				{"type": "kill", "count": 10, "title": "CLEAR THE SOUTH STREET",
-					"radio": "South street first. Make some room."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "Thermal shows hives in the block. They keep birthing the dead until they burst. Find them, and keep shooting."},
 				{"type": "search", "marker": "SluiceWheel", "seconds": 5.0, "title": "OPEN THE SLUICE",
 					"radio": "Sluice wheel is in the pump house under the viaduct. Cross the west bridge."},
 				{"type": "destroy", "marker": "YardNest", "title": "BURN OUT THE NEST",
@@ -144,8 +146,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. Someone's been broadcasting from the central terminal every night at nine. A medic. She says she knows what's in the blood.",
 			"steps": [
-				{"type": "kill", "count": 14, "title": "CLEAR THE BUS BAYS",
-					"radio": "Runners in the bays. They're faster than anything in the block. Keep moving."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "The district is infested. Hives wherever the trains stopped. Burn them out before anything else."},
 				{"type": "reach", "marker": "SurvivorsCall", "radius": 3.0, "title": "FIND THE SURVIVORS",
 					"radio": "She's in the concourse. Doors are on the forecourt."},
 				{"type": "defend", "marker": "MedicBarricade", "seconds": 25.0, "title": "HOLD THE CONCOURSE",
@@ -170,8 +172,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. The evacuation trains all went to one place. The shunter in this yard can tell us where the line ends.",
 			"steps": [
-				{"type": "kill", "count": 14, "title": "CLEAR THE YARD",
-					"radio": "Lots of open ground out there. Use the wagons."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "The district is infested. Hives wherever the trains stopped. Burn them out before anything else."},
 				{"type": "search", "marker": "NorthSwitch", "seconds": 4.0, "title": "THROW THE SWITCH",
 					"radio": "Switch lever is in the signal tower, north side of the yard."},
 				{"type": "destroy", "marker": "YardNest", "title": "BURN OUT THE NEST",
@@ -196,8 +198,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. I can't see past the interchange. Get up high and give me eyes on the lab road.",
 			"steps": [
-				{"type": "kill", "count": 14, "title": "CLEAR THE ON-RAMP",
-					"radio": "Street level first. Stairs up are on both ends."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "The district is infested. Hives wherever the trains stopped. Burn them out before anything else."},
 				{"type": "destroy", "marker": "RampNest", "title": "BURN OUT THE NEST",
 					"radio": "Nest on the bus deck. Burn it before you go higher."},
 				{"type": "search", "marker": "TollRadio", "seconds": 4.0, "title": "RAISE THE RELAY",
@@ -224,8 +226,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": true,
 			"briefing": "WARDEN, Overwatch. The docks have been dark for a week. Thermal shows one heat signature three times the size of the others. Bring a light.",
 			"steps": [
-				{"type": "kill", "count": 16, "title": "CLEAR THE CONTAINER YARD",
-					"radio": "Your weapon light is all you've got until the floodlights are back. Stay in the lanes."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "Hives grow fast in the dark. Light them up and keep shooting until they pop."},
 				{"type": "search", "marker": "FloodlightGenerator", "seconds": 5.0, "title": "RESTART THE GENERATOR",
 					"radio": "Floodlight generator is in the warehouse, west side of the yard."},
 				{"type": "hunt", "marker": "BruteCranes", "health": 8500.0, "title": "KILL THE BRUTE",
@@ -248,8 +250,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": true,
 			"briefing": "WARDEN, Overwatch. The ship on the slipway is registered to Crimson Complex. Its manifest says 'medical supplies'. Let's see.",
 			"steps": [
-				{"type": "kill", "count": 16, "title": "CLEAR THE SLIPWAY",
-					"radio": "Yard first. The gangways are the only way up and you don't want company on them."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "Hives grow fast in the dark. Light them up and keep shooting until they pop."},
 				{"type": "search", "marker": "CuttingTorch", "seconds": 4.0, "title": "GET THE CUTTING TORCH",
 					"radio": "Cutting torch is in the workshop on the west side."},
 				{"type": "defend", "marker": "HoldBreach", "seconds": 25.0, "title": "HOLD THE DECK",
@@ -274,8 +276,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": true,
 			"briefing": "WARDEN, Overwatch. Every lit road to the lab runs through this depot. Burn it and they lose the way.",
 			"steps": [
-				{"type": "kill", "count": 16, "title": "CLEAR THE DEPOT",
-					"radio": "Depot's crawling. The pipe racks make good cover and bad corners."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "Hives grow fast in the dark. Light them up and keep shooting until they pop."},
 				{"type": "search", "marker": "MainValve", "seconds": 5.0, "title": "CLOSE THE MAIN VALVE",
 					"radio": "Main valve is on the tank road, north side."},
 				{"type": "hunt", "marker": "BrutePipes", "health": 10500.0, "title": "KILL THE BRUTE",
@@ -302,8 +304,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. This is where it started. Everything we found points here. Open the front door.",
 			"steps": [
-				{"type": "kill", "count": 18, "title": "BREACH THE CHECKPOINT",
-					"radio": "They've been waiting at the gate for weeks. Clear the plaza."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "The Complex is one big hive now. Mounds at every door. Burn them or we never get inside."},
 				{"type": "search", "marker": "GateOverride", "seconds": 5.0, "title": "TAKE THE GATE OVERRIDE",
 					"radio": "Override key is in the guard house, north-west corner of the plaza."},
 				{"type": "defend", "marker": "PlazaHold", "seconds": 25.0, "title": "HOLD THE PLAZA",
@@ -326,8 +328,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. The medic says Patient Zero's sample could be the start of a cure. Bring it home.",
 			"steps": [
-				{"type": "kill", "count": 18, "title": "CLEAR THE COURTYARD",
-					"radio": "Courtyard's full. Labs are on the north side."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "The Complex is one big hive now. Mounds at every door. Burn them or we never get inside."},
 				{"type": "search", "marker": "LabTerminal", "seconds": 5.0, "title": "PULL THE RESEARCH FILES",
 					"radio": "Files are on the terminal in Lab B. Middle door."},
 				{"type": "hunt", "marker": "BruteCryo", "health": 11000.0, "title": "KILL THE BRUTE",
@@ -353,8 +355,8 @@ const CONTRACTS: Dictionary = {
 			"is_night": false,
 			"briefing": "WARDEN, Overwatch. The files say there's a reason the freezers have to stay cold. They call it Crimson Prime. We end this tonight.",
 			"steps": [
-				{"type": "kill", "count": 20, "title": "BREACH THE CORE YARD",
-					"radio": "Core yard first. Everything they made is between you and that hall."},
+				{"type": "hives", "title": "PURGE THE HIVES",
+					"radio": "The Complex is one big hive now. Mounds at every door. Burn them or we never get inside."},
 				{"type": "search", "marker": "CouplingWest", "seconds": 4.0, "title": "CUT THE WEST COUPLING",
 					"radio": "Two power couplings feed the hall. West one first."},
 				{"type": "search", "marker": "CouplingEast", "seconds": 4.0, "title": "CUT THE EAST COUPLING",
@@ -505,6 +507,22 @@ const KILL_REWARDS: Dictionary = {
 	"shambler": {"sc": 1, "xp": 2},
 	"runner": {"sc": 5, "xp": 4},
 	"tank": {"sc": 25, "xp": 15},
+}
+
+## Hives every contract opens with ("Purge the hives"), largest first. The run places them
+## at random hive sites of the layout, so every run is laid out differently.
+const HIVE_PLAN: Dictionary = {
+	1: ["M", "S"],
+	2: ["M", "S", "S"],
+	3: ["L", "M", "S"],
+	4: ["L", "M", "M", "S"],
+}
+## Hives get tougher deeper in (health multiplier per sector)
+const HIVE_HP_SCALE: Array[float] = [1.0, 1.0, 1.15, 1.3, 1.45]
+const HIVE_REWARDS: Dictionary = {
+	"S": {"sc": 20, "rc": 0, "xp": 15},
+	"M": {"sc": 50, "rc": 0, "xp": 35},
+	"L": {"sc": 120, "rc": 1, "xp": 80},
 }
 
 ## Clearance level each Sector unlocks at (index = sector id).
@@ -760,6 +778,18 @@ func get_run_kill_count() -> int:
 	for k in in_run_kills:
 		total += int(in_run_kills[k])
 	return total
+
+
+## A hive burned out during a run: banked with the run loot (lost like it on death).
+func record_hive(size_class: String) -> Dictionary:
+	var reward: Dictionary = HIVE_REWARDS.get(size_class, HIVE_REWARDS["M"])
+	if not run_active:
+		return reward
+	in_run_sc += int(reward["sc"])
+	in_run_rc += int(reward["rc"])
+	in_run_xp += int(reward["xp"])
+	in_run_loot_changed.emit(in_run_sc, in_run_rc)
+	return reward
 
 
 func record_kill(enemy_type: String) -> void:

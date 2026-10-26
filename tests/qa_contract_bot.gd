@@ -101,6 +101,9 @@ func _drive() -> void:
 			"destroy":
 				if is_instance_valid(job._step_node):
 					job._step_node.take_damage(50.0)
+			"hives":
+				for h in get_nodes_in_group("hives"):
+					h.take_damage(400.0)
 			"hunt":
 				if is_instance_valid(job._step_node):
 					p.global_position = job._step_node.global_position + Vector3(0.0, 0.3, 6.0)

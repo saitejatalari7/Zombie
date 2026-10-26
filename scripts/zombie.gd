@@ -342,6 +342,14 @@ func ignite(duration: float = 6.0) -> void:
 	burn_timer = maxf(burn_timer, duration)
 	_set_head_color(Color(1.0, 0.35, 0.05))
 
+const STAGGER_IMMUNITY := 0.7
+var _stagger_ready_at: float = 0.0
+
+
+func _now() -> float:
+	return float(Time.get_ticks_msec()) * 0.001
+
+
 func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO) -> void:
 	if is_dead or state == State.DEAD:
 		return
@@ -351,10 +359,12 @@ func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO) -> void:
 	knockback_velocity += impulse * (0.0 if is_in_group("bosses") else 1.0)
 	last_hit_impulse = impulse
 	
-	# Stagger on hit (bullets deliver stopping power)
-	if stagger_duration > 0.0:
+	# Stagger on hit (bullets deliver stopping power), but not every bullet: at nine rounds a
+	# second that stun-locked the whole front rank at the edge of auto-fire range
+	if stagger_duration > 0.0 and _stagger_ready_at <= _now():
 		state = State.STAGGER
 		stagger_timer = stagger_duration
+		_stagger_ready_at = _now() + STAGGER_IMMUNITY
 	
 	# Flash red
 	hit_flash_timer = 0.08

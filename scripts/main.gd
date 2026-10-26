@@ -137,10 +137,19 @@ func _start_mission(_sector_id: int) -> void:
 	job.objective_met.connect(_on_objective_met)
 	job.radio_message.connect(func(text: String): hud.show_radio("OVERWATCH", text))
 	job.progress_changed.connect(_on_job_progress)
+	if job.has_signal("hive_destroyed"):
+		job.connect("hive_destroyed", _on_hive_destroyed)
 	gm.in_run_kills_changed.connect(job.on_run_kills_changed)
 	player.died.connect(_on_player_died)
 	job.start()
 	_spawn_intel(gm)
+
+func _on_hive_destroyed(size_class: String, reward: Dictionary) -> void:
+	var names := {"S": "HIVE POD", "M": "HIVE", "L": "HIVE MOUND"}
+	var sub := "+%d coins" % int(reward.get("sc", 0))
+	if int(reward.get("rc", 0)) > 0:
+		sub += "  +%d core" % int(reward["rc"])
+	hud.show_banner("%s DESTROYED" % names.get(size_class, "HIVE"), sub)
 
 func _on_job_progress(fraction: float, active: bool) -> void:
 	if fraction <= 0.0 and not active:

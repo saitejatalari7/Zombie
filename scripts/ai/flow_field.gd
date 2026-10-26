@@ -181,6 +181,26 @@ func _downhill(c: int) -> int:
 	return best
 
 
+## A walkable floor point min_r..max_r from `around` (flat distance) that a zombie can walk
+## to it from (it is on the current field). Used to make hive defenders flank the player.
+## Returns null when nothing fits after a few tries.
+func flank_point(around: Vector3, min_r: float, max_r: float) -> Variant:
+	for attempt in range(14):
+		var a := randf() * TAU
+		var r := randf_range(min_r, max_r)
+		var probe := around + Vector3(cos(a), 0.0, sin(a)) * r
+		var c := _cell_index(probe)
+		if c < 0 or heights[c] < 0.0 or dist[c] < 0:
+			continue
+		# Path length bound: no flanker that would have to walk around half the map
+		if float(dist[c]) * cell > max_r * 2.2:
+			continue
+		var pos := _cell_center(c)
+		pos.y = heights[c]
+		return pos
+	return null
+
+
 func _cell_index(pos: Vector3) -> int:
 	var i := int(floor((pos.x - x0) / cell))
 	var j := int(floor((pos.z - z0) / cell))

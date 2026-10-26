@@ -43,6 +43,15 @@ PROP_FOOTPRINTS = {
 }
 PROP_MARGIN = 0.25   # keep zombies (radius ~0.4) from planning a path that grazes a prop
 
+# Hive sites: open floor needed around each size of hive (m), how many sites per layout,
+# and how far they keep from the spawn, the LZ and story objectives.
+HIVE_CLEARANCE = {"L": 3.0, "M": 2.0, "S": 1.3}
+HIVE_SITE_COUNT = 6
+HIVE_MIN_SPACING = 12.0
+HIVE_SPAWN_CLEAR = 22.0
+HIVE_LZ_CLEAR = 10.0
+HIVE_MARKER_CLEAR = 5.0
+
 REQUIRED_MARKERS = ("PlayerSpawn", "ExtractionZone", "ZombieSpawners", "OpeningMob", "PickupSpawns")
 
 
@@ -218,6 +227,68 @@ def walk_distances(L, cells):
     return idx, dist
 
 
+def pick_hive_sites(L, cells):
+    """Hive sites for the layout: reachable open floor, spread out, biggest sizes first.
+    Returns (points, names). Names carry the biggest hive that fits: HiveL_1, HiveM_2..."""
+    idx, dist = walk_distances(L, cells)
+    def flat(a, b):
+        return math.hypot(a[0] - b[0], a[2] - b[2])
+    spawn = L.markers["PlayerSpawn"][0]
+    lz = L.markers["ExtractionZone"][0]
+    keep_off = [p for g in ("StepMarkers", "ObjectiveSpawns", "IntelSpots", "PickupSpawns") for p in L.markers.get(g, [])]
+
+    def capacity(k, y):
+        for size in ("L", "M", "S"):
+            r = HIVE_CLEARANCE[size]
+            n = int(math.ceil(r / CELL))
+            ok = True
+            for di in range(-n, n + 1):
+                for dj in range(-n, n + 1):
+                    if (di * di + dj * dj) * CELL * CELL > r * r:
+                        continue
+                    h = idx.get((k[0] + di, k[1] + dj))
+                    if h is None or abs(h - y) > 0.3:
+                        ok = False
+                        break
+                if not ok:
+                    break
+            if ok:
+                return size
+        return None
+
+    cands = []
+    for k, y in sorted(idx.items()):
+        if k not in dist or k[0] % 2 or k[1] % 2:
+            continue  # reachable only; a 1 m grid of candidates is plenty
+        p = ((k[0] + 0.5) * CELL, y, (k[1] + 0.5) * CELL)
+        if L.room_of(p[0], p[2]):
+            continue  # hives grow in the open, where the camera always sees them
+        if flat(p, spawn) < HIVE_SPAWN_CLEAR or flat(p, lz) < HIVE_LZ_CLEAR:
+            continue
+        if any(flat(p, q) < HIVE_MARKER_CLEAR for q in keep_off):
+            continue
+        cap = capacity(k, y)
+        if cap:
+            cands.append((p, cap))
+    chosen = []
+    # Biggest first: up to 2 mound sites, then nest sites, then pods; farthest-point spread
+    for size, quota in (("L", 2), ("M", 2), ("S", HIVE_SITE_COUNT)):
+        fits = [c for c in cands if "SML".index(c[1]) >= "SML".index(size)]
+        while fits and quota > 0 and len(chosen) < HIVE_SITE_COUNT:
+            best, best_d = None, -1.0
+            for p, cap in fits:
+                d = min([flat(p, q) for q, _ in chosen] + [flat(p, spawn)])
+                if d > best_d:
+                    best, best_d = (p, cap), d  # named by what the site can hold
+            if best is None or (chosen and best_d < HIVE_MIN_SPACING):
+                break
+            chosen.append(best)
+            quota -= 1
+    points = [(round(p[0], 2), round(p[1], 2), round(p[2], 2)) for p, _ in chosen]
+    names = [f"Hive{size}_{i + 1}" for i, (_, size) in enumerate(chosen)]
+    return points, names
+
+
 def check_reachability(L, cells):
     """Breadth-first walk from the player spawn. Returns (report dict, problems list)."""
     idx, dist = walk_distances(L, cells)
@@ -317,6 +388,14 @@ def build(L, verbose=True):
     for group in REQUIRED_MARKERS:
         if not L.markers.get(group):
             problems.append(f"missing marker group {group}")
+    if "HiveSites" not in L.markers:
+        pts, names = pick_hive_sites(L, cells)
+        L.markers = dict(L.markers, HiveSites=pts)
+        L.marker_names = dict(L.marker_names, HiveSites=names)
+    hive_sizes = "".join(n[4] for n in L.marker_names.get("HiveSites", []))
+    if len(L.markers["HiveSites"]) < 4 or "M" not in hive_sizes and "L" not in hive_sizes:
+        problems.append(f"too few hive sites ({hive_sizes}); open up more floor")
+    report.append(f"  hive sites: {' '.join(L.marker_names['HiveSites'])}")
     out_blocks = []
     for b in L.blocks:
         name, x0, x1, z0, z1, by, target, kind = b

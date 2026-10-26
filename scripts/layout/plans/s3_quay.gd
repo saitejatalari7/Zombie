@@ -1430,6 +1430,38 @@ const PLAN := {
 				0.3,
 				-48.5
 			]
+		],
+		"HiveSites": [
+			[
+				42.25,
+				0.0,
+				-27.75
+			],
+			[
+				12.25,
+				0.0,
+				14.25
+			],
+			[
+				-13.75,
+				0.0,
+				-28.75
+			],
+			[
+				43.25,
+				0.0,
+				5.25
+			],
+			[
+				-44.75,
+				0.0,
+				-21.75
+			],
+			[
+				14.25,
+				0.0,
+				-16.75
+			]
 		]
 	},
 	"marker_names": {
@@ -1472,6 +1504,14 @@ const PLAN := {
 			"IntelHarbourMaster",
 			"IntelContainer",
 			"IntelPier"
+		],
+		"HiveSites": [
+			"HiveL_1",
+			"HiveL_2",
+			"HiveM_3",
+			"HiveM_4",
+			"HiveS_5",
+			"HiveM_6"
 		]
 	},
 	"nav": {

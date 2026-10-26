@@ -1550,6 +1550,38 @@ const PLAN := {
 				0.3,
 				-28.0
 			]
+		],
+		"HiveSites": [
+			[
+				42.25,
+				0.0,
+				-22.75
+			],
+			[
+				-13.75,
+				6.0,
+				-42.75
+			],
+			[
+				8.25,
+				0.0,
+				11.25
+			],
+			[
+				-43.75,
+				0.0,
+				-24.75
+			],
+			[
+				44.25,
+				0.0,
+				12.25
+			],
+			[
+				10.25,
+				0.0,
+				-20.75
+			]
 		]
 	},
 	"marker_names": {
@@ -1593,6 +1625,14 @@ const PLAN := {
 			"IntelShipLog",
 			"IntelWorkshop",
 			"IntelSlipway"
+		],
+		"HiveSites": [
+			"HiveL_1",
+			"HiveL_2",
+			"HiveM_3",
+			"HiveM_4",
+			"HiveS_5",
+			"HiveL_6"
 		]
 	},
 	"nav": {
