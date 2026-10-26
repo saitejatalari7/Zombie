@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3 uid="uid://df713zombie"]
+
+[ext_resource type="Script" path="res://scripts/zombie.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/zombie_shambler.glb" id="2_zombie_glb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_zombie"]
+radius = 0.32
+height = 1.6
+
+[node name="Zombie" type="CharacterBody3D" groups=["zombies"]]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_script")
+base_speed = 0.6
+attack_damage = 12.0
+attack_range = 1.25
+attack_cooldown = 1.2
+stagger_duration = 0.18
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CapsuleShape3D_zombie")
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="Model" parent="Visuals" instance=ExtResource("2_zombie_glb")]

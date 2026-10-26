@@ -1,0 +1,268 @@
+[gd_scene format=3 uid="uid://df727mainmenu"]
+
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/textures/game_icon.png" id="2_icon"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.09, 0.1, 0.13, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
+bg_color = Color(0.95, 0.95, 0.98, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
+bg_color = Color(0.8, 0.8, 0.84, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass_btn"]
+bg_color = Color(0.18, 0.2, 0.25, 0.75)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9, 0.92, 0.98, 0.6)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font_size = 72
+font_color = Color(0.96, 0.96, 0.98, 1)
+outline_size = 10
+outline_color = Color(0.06, 0.07, 0.09, 0.9)
+
+[sub_resource type="LabelSettings" id="LabelSettings_sub"]
+font_size = 36
+font_color = Color(0.88, 0.12, 0.15, 1)
+outline_size = 6
+outline_color = Color(0.06, 0.07, 0.09, 0.9)
+
+[sub_resource type="LabelSettings" id="LabelSettings_btn_dark"]
+font_size = 32
+font_color = Color(0.1, 0.12, 0.16, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_btn_light"]
+font_size = 30
+font_color = Color(0.95, 0.95, 0.98, 1)
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="HeaderContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -400.0
+offset_top = 220.0
+offset_right = 400.0
+offset_bottom = 600.0
+grow_horizontal = 2
+alignment = 1
+
+[node name="IconDisplay" type="TextureRect" parent="HeaderContainer"]
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("2_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TitleLabel" type="Label" parent="HeaderContainer"]
+layout_mode = 2
+text = "RED CHALK"
+label_settings = SubResource("LabelSettings_title")
+horizontal_alignment = 1
+
+[node name="SubTitleLabel" type="Label" parent="HeaderContainer"]
+layout_mode = 2
+text = "— OUTBREAK —"
+label_settings = SubResource("LabelSettings_sub")
+horizontal_alignment = 1
+
+[node name="MenuButtons" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = 80.0
+offset_right = 260.0
+offset_bottom = 440.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="PlayButton" type="Button" parent="MenuButtons"]
+custom_minimum_size = Vector2(520, 90)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+
+[node name="PlayLabel" type="Label" parent="MenuButtons/PlayButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "PLAY GAME"
+label_settings = SubResource("LabelSettings_btn_dark")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SettingsButton" type="Button" parent="MenuButtons"]
+custom_minimum_size = Vector2(520, 80)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_glass_btn")
+
+[node name="SettingsLabel" type="Label" parent="MenuButtons/SettingsButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "SETTINGS"
+label_settings = SubResource("LabelSettings_btn_light")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="QuitButton" type="Button" parent="MenuButtons"]
+custom_minimum_size = Vector2(520, 80)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_glass_btn")
+
+[node name="QuitLabel" type="Label" parent="MenuButtons/QuitButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "QUIT"
+label_settings = SubResource("LabelSettings_btn_light")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FooterLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -80.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "v1.0  |  Mobile Tactical Edition"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SettingsModal" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dimmer" type="ColorRect" parent="SettingsModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="Card" type="Panel" parent="SettingsModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -240.0
+offset_right = 300.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_glass_btn")
+
+[node name="VBox" type="VBoxContainer" parent="SettingsModal/Card"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Title" type="Label" parent="SettingsModal/Card/VBox"]
+layout_mode = 2
+text = "SETTINGS"
+label_settings = SubResource("LabelSettings_sub")
+horizontal_alignment = 1
+
+[node name="ShakeBtn" type="Button" parent="SettingsModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_glass_btn")
+text = "SCREEN SHAKE: ON"
+
+[node name="BloodBtn" type="Button" parent="SettingsModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_glass_btn")
+text = "BLOOD PARTICLES: MAX"
+
+[node name="CloseSettingsBtn" type="Button" parent="SettingsModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+
+[node name="CloseLabel" type="Label" parent="SettingsModal/Card/VBox/CloseSettingsBtn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "DONE"
+label_settings = SubResource("LabelSettings_btn_dark")
+horizontal_alignment = 1
+vertical_alignment = 1

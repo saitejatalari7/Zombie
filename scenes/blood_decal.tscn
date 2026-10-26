@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://df706blooddecal"]
+
+[ext_resource type="Script" path="res://scripts/blood_decal.gd" id="1_script"]
+
+[node name="BloodDecal" type="Decal"]
+size = Vector3(1.2, 1.2, 1.2)
+cull_mask = 1048575
+script = ExtResource("1_script")

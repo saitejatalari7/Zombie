@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://df722shellcasing"]
+
+[ext_resource type="Script" path="res://scripts/shell_casing.gd" id="1_script"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_brass"]
+albedo_color = Color(0.92, 0.75, 0.28, 1)
+metallic = 0.95
+roughness = 0.22
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_shell"]
+material = SubResource("StandardMaterial3D_brass")
+top_radius = 0.016
+bottom_radius = 0.016
+height = 0.06
+
+[node name="ShellCasing" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CylinderMesh_shell")

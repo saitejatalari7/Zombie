@@ -1,0 +1,5 @@
+[ZombieRebalanceBenchmark]
+Avg Frame Time: 6.90 ms (145.0 FPS)
+Worst Spike: 11.98 ms (83.5 FPS)
+Active Zombies: 6
+Shambler Speed: 0.6 m/s | Runner: 1.8 m/s | Tank: 0.7 m/s

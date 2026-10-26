@@ -1,0 +1,718 @@
+[gd_scene format=3 uid="uid://df715hud"]
+
+[ext_resource type="Script" path="res://scripts/mobile_hud.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://df714joystick" path="res://scenes/ui/virtual_joystick.tscn" id="2_joystick"]
+[ext_resource type="Texture2D" path="res://assets/textures/fire_button.png" id="3_fire_tex"]
+[ext_resource type="Texture2D" path="res://assets/textures/super_blast_button.png" id="4_blast_tex"]
+[ext_resource type="Texture2D" path="res://assets/textures/jump_button.png" id="5_jump_tex"]
+[ext_resource type="Texture2D" path="res://assets/textures/pause_icon.png" id="6_pause_tex"]
+[ext_resource type="Texture2D" path="res://assets/textures/molotov_icon.png" id="7_molotov_icon"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.12, 0.12, 0.15, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill"]
+bg_color = Color(0.85, 0.08, 0.12, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frenzy_bg"]
+bg_color = Color(0.12, 0.06, 0.03, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.55, 0.12, 0.9)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frenzy_fill"]
+bg_color = Color(1, 0.45, 0.05, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
+bg_color = Color(0.08, 0.09, 0.12, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85, 0.88, 0.95, 0.6)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.6)
+shadow_size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal_btn_solid"]
+bg_color = Color(0.95, 0.95, 0.98, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal_btn_glass"]
+bg_color = Color(0.16, 0.18, 0.23, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8, 0.85, 0.95, 0.5)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="LabelSettings" id="LabelSettings_hud"]
+font_size = 32
+font_color = Color(0.95, 0.95, 0.98, 1)
+outline_size = 6
+outline_color = Color(0.08, 0.08, 0.1, 0.7)
+
+[sub_resource type="LabelSettings" id="LabelSettings_btn"]
+font_size = 24
+font_color = Color(1, 1, 1, 0.95)
+outline_size = 4
+outline_color = Color(0, 0, 0, 0.7)
+
+[sub_resource type="LabelSettings" id="LabelSettings_modal_title"]
+font_size = 48
+font_color = Color(0.96, 0.96, 0.98, 1)
+outline_size = 6
+outline_color = Color(0, 0, 0, 0.8)
+
+[sub_resource type="LabelSettings" id="LabelSettings_modal_sub"]
+font_size = 26
+font_color = Color(0.7, 0.72, 0.78, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_banner"]
+bg_color = Color(0.08, 0.09, 0.12, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.92, 0.18, 0.22, 0.95)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0.7, 0.05, 0.08, 0.4)
+shadow_size = 14
+
+[sub_resource type="LabelSettings" id="LabelSettings_banner_title"]
+font_size = 24
+font_color = Color(1, 0.95, 0.95, 1)
+outline_size = 6
+outline_color = Color(0.65, 0.05, 0.08, 0.95)
+
+[sub_resource type="LabelSettings" id="LabelSettings_banner_sub"]
+font_size = 18
+font_color = Color(0.85, 0.82, 0.8, 1)
+outline_size = 3
+outline_color = Color(0, 0, 0, 0.7)
+
+[sub_resource type="LabelSettings" id="LabelSettings_ammo"]
+font_size = 22
+font_color = Color(1, 0.88, 0.35, 1)
+outline_size = 4
+outline_color = Color(0.12, 0.06, 0.02, 0.95)
+
+[sub_resource type="LabelSettings" id="LabelSettings_frenzy"]
+font_size = 22
+font_color = Color(1, 0.85, 0.3, 1)
+outline_size = 4
+outline_color = Color(0.15, 0.05, 0.02, 0.9)
+
+[sub_resource type="LabelSettings" id="LabelSettings_fps"]
+font_size = 20
+font_color = Color(0.35, 1, 0.65, 0.95)
+outline_size = 4
+outline_color = Color(0.05, 0.08, 0.06, 0.85)
+
+[node name="MobileHUD" type="CanvasLayer"]
+process_mode = 3
+script = ExtResource("1_script")
+
+[node name="TopBar" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 200.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="HealthBar" type="ProgressBar" parent="TopBar"]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 50.0
+offset_right = 440.0
+offset_bottom = 80.0
+theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill")
+value = 100.0
+show_percentage = false
+
+[node name="WaveLabel" type="Label" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -390.0
+offset_top = 50.0
+offset_right = -130.0
+offset_bottom = 95.0
+grow_horizontal = 0
+text = "WAVE 01"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 2
+
+[node name="PauseButton" type="TextureButton" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -115.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = 115.0
+grow_horizontal = 0
+pivot_offset = Vector2(37, 37)
+texture_normal = ExtResource("6_pause_tex")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="ZombieCountLabel" type="Label" parent="TopBar"]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 95.0
+offset_right = 480.0
+offset_bottom = 145.0
+text = "💀 00  |  KILLS: 0"
+label_settings = SubResource("LabelSettings_hud")
+
+[node name="FpsLabel" type="Label" parent="TopBar"]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 145.0
+offset_right = 360.0
+offset_bottom = 180.0
+text = "⚡ 144 FPS  (6.9 ms)"
+label_settings = SubResource("LabelSettings_fps")
+
+[node name="PowerupWidget" type="Panel" parent="TopBar"]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -230.0
+offset_top = 110.0
+offset_right = 230.0
+offset_bottom = 190.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_frenzy_bg")
+
+[node name="Icon" type="TextureRect" parent="TopBar/PowerupWidget"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 14.0
+offset_top = -26.0
+offset_right = 66.0
+offset_bottom = 26.0
+grow_vertical = 2
+texture = ExtResource("7_molotov_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="TopBar/PowerupWidget"]
+layout_mode = 0
+offset_left = 80.0
+offset_top = 10.0
+offset_right = 440.0
+offset_bottom = 40.0
+text = "🔥 MOLOTOV FRENZY - 15.0s"
+label_settings = SubResource("LabelSettings_frenzy")
+
+[node name="CountdownBar" type="ProgressBar" parent="TopBar/PowerupWidget"]
+layout_mode = 0
+offset_left = 80.0
+offset_top = 46.0
+offset_right = 430.0
+offset_bottom = 64.0
+theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_frenzy_fill")
+value = 100.0
+show_percentage = false
+
+[node name="Controls" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VirtualJoystick" parent="Controls" instance=ExtResource("2_joystick")]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 60.0
+offset_top = -420.0
+offset_right = 420.0
+offset_bottom = -60.0
+grow_vertical = 0
+
+[node name="FireButton" type="TextureButton" parent="Controls"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -310.0
+offset_top = -340.0
+offset_right = -70.0
+offset_bottom = -100.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset = Vector2(120, 120)
+texture_normal = ExtResource("3_fire_tex")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="FireLabel" type="Label" parent="Controls/FireButton"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -50.0
+offset_top = -18.0
+offset_right = 50.0
+offset_bottom = 18.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "FIRE"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SuperBlastButton" type="TextureButton" parent="Controls"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -275.0
+offset_top = -540.0
+offset_right = -105.0
+offset_bottom = -370.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset = Vector2(85, 85)
+texture_normal = ExtResource("4_blast_tex")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="BlastLabel" type="Label" parent="Controls/SuperBlastButton"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -75.0
+offset_top = -14.0
+offset_right = 75.0
+offset_bottom = 14.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "SUPER BLAST"
+label_settings = SubResource("LabelSettings_btn")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CooldownOverlay" type="ColorRect" parent="Controls/SuperBlastButton"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 0.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="MolotovButton" type="TextureButton" parent="Controls"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -475.0
+offset_top = -490.0
+offset_right = -315.0
+offset_bottom = -330.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset = Vector2(80, 80)
+texture_normal = ExtResource("4_blast_tex")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="Icon" type="TextureRect" parent="Controls/MolotovButton"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -32.0
+offset_top = -42.0
+offset_right = 32.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("7_molotov_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MolotovLabel" type="Label" parent="Controls/MolotovButton"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -65.0
+offset_top = 18.0
+offset_right = 65.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "MOLOTOV"
+label_settings = SubResource("LabelSettings_btn")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="AmmoBadge" type="Label" parent="Controls/MolotovButton"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -60.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = 36.0
+grow_horizontal = 0
+text = "3/3"
+label_settings = SubResource("LabelSettings_ammo")
+horizontal_alignment = 2
+
+[node name="ClimbButton" type="TextureButton" parent="Controls"]
+modulate = Color(1, 1, 1, 0.45)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -465.0
+offset_top = -295.0
+offset_right = -305.0
+offset_bottom = -135.0
+grow_horizontal = 0
+grow_vertical = 0
+pivot_offset = Vector2(80, 80)
+texture_normal = ExtResource("5_jump_tex")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="ClimbLabel" type="Label" parent="Controls/ClimbButton"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -55.0
+offset_top = 24.0
+offset_right = 55.0
+offset_bottom = 56.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "CLIMB"
+label_settings = SubResource("LabelSettings_btn")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="AutoFireButton" type="Button" parent="Controls"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -310.0
+offset_top = -415.0
+offset_right = -70.0
+offset_bottom = -355.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 20
+text = "AUTO: OFF"
+
+[node name="MissionPill" type="PanelContainer" parent="TopBar"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -260.0
+offset_top = 100.0
+offset_right = 260.0
+offset_bottom = 145.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_banner")
+
+[node name="MissionLabel" type="Label" parent="TopBar/MissionPill"]
+layout_mode = 2
+text = "[ 1/3 ] SECTOR EXTRACTION — 140m"
+label_settings = SubResource("LabelSettings_modal_sub")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StreetClearedBanner" type="Panel" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -250.0
+offset_top = 110.0
+offset_right = 250.0
+offset_bottom = 195.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_banner")
+
+[node name="Title" type="Label" parent="StreetClearedBanner"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -240.0
+offset_top = 10.0
+offset_right = 240.0
+offset_bottom = 44.0
+grow_horizontal = 2
+text = "⚡ STREET CLEARED — TERRACE UNLOCKED"
+label_settings = SubResource("LabelSettings_banner_title")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Sub" type="Label" parent="StreetClearedBanner"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -240.0
+offset_top = 46.0
+offset_right = 240.0
+offset_bottom = 74.0
+grow_horizontal = 2
+text = "Follow the holographic arrow up the Grand Ramp ➔"
+label_settings = SubResource("LabelSettings_banner_sub")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PauseModal" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="PauseModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.06, 0.08, 0.8)
+
+[node name="Card" type="Panel" parent="PauseModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -320.0
+offset_right = 300.0
+offset_bottom = 320.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
+
+[node name="VBox" type="VBoxContainer" parent="PauseModal/Card"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 35.0
+offset_right = -40.0
+offset_bottom = -35.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="Title" type="Label" parent="PauseModal/Card/VBox"]
+layout_mode = 2
+text = "PAUSED"
+label_settings = SubResource("LabelSettings_modal_title")
+horizontal_alignment = 1
+
+[node name="SubTitle" type="Label" parent="PauseModal/Card/VBox"]
+layout_mode = 2
+text = "RED CHALK: OUTBREAK"
+label_settings = SubResource("LabelSettings_modal_sub")
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="PauseModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 2
+
+[node name="ResumeBtn" type="Button" parent="PauseModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.12, 0.15, 1)
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxFlat_modal_btn_solid")
+text = "RESUME"
+
+[node name="RestartBtn" type="Button" parent="PauseModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.98, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_modal_btn_glass")
+text = "RESTART"
+
+[node name="SettingsBtn" type="Button" parent="PauseModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.98, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_modal_btn_glass")
+text = "SETTINGS"
+
+[node name="MainMenuBtn" type="Button" parent="PauseModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.98, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_modal_btn_glass")
+text = "MAIN MENU"
+
+[node name="SettingsModal" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="SettingsModal"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.06, 0.08, 0.85)
+
+[node name="Card" type="Panel" parent="SettingsModal"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -260.0
+offset_right = 280.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_modal")
+
+[node name="VBox" type="VBoxContainer" parent="SettingsModal/Card"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 35.0
+offset_right = -40.0
+offset_bottom = -35.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Title" type="Label" parent="SettingsModal/Card/VBox"]
+layout_mode = 2
+text = "SETTINGS"
+label_settings = SubResource("LabelSettings_modal_title")
+horizontal_alignment = 1
+
+[node name="ShakeToggleBtn" type="Button" parent="SettingsModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.98, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_modal_btn_glass")
+text = "SCREEN SHAKE: ON"
+
+[node name="BloodToggleBtn" type="Button" parent="SettingsModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.95, 0.98, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_modal_btn_glass")
+text = "BLOOD PARTICLES: MAX"
+
+[node name="CloseSettingsBtn" type="Button" parent="SettingsModal/Card/VBox"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.12, 0.15, 1)
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxFlat_modal_btn_solid")
+text = "BACK"

@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://df715tank"]
+
+[ext_resource type="Script" path="res://scripts/zombie.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/zombie_tank.glb" id="2_tank_glb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_tank"]
+radius = 0.6
+height = 2.4
+
+[node name="ZombieTank" type="CharacterBody3D" groups=["bosses", "zombies"]]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_script")
+base_speed = 0.7
+max_health = 450.0
+attack_damage = 25.0
+attack_range = 1.65
+attack_cooldown = 1.8
+attack_windup_time = 0.5
+stagger_duration = 0.04
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+shape = SubResource("CapsuleShape3D_tank")
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="Model" parent="Visuals" instance=ExtResource("2_tank_glb")]

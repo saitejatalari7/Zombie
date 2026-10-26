@@ -1,0 +1,41 @@
+[gd_scene format=3 uid="uid://df721bulletimpact"]
+
+[ext_resource type="Script" path="res://scripts/bullet_impact.gd" id="1_script"]
+
+[sub_resource type="Curve" id="Curve_spark"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), -2.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_spark"]
+curve = SubResource("Curve_spark")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_spark"]
+direction = Vector3(0, 1, 0)
+spread = 60.0
+initial_velocity_min = 3.5
+initial_velocity_max = 7.0
+gravity = Vector3(0, -18, 0)
+scale_min = 0.03
+scale_max = 0.06
+scale_curve = SubResource("CurveTexture_spark")
+color = Color(1, 0.92, 0.6, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_spark"]
+shading_mode = 0
+albedo_color = Color(1, 0.92, 0.6, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_spark"]
+material = SubResource("StandardMaterial3D_spark")
+size = Vector3(0.04, 0.04, 0.04)
+
+[node name="BulletImpact" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="."]
+emitting = false
+amount = 10
+lifetime = 0.16
+one_shot = true
+explosiveness = 1.0
+process_material = SubResource("ParticleProcessMaterial_spark")
+draw_pass_1 = SubResource("BoxMesh_spark")

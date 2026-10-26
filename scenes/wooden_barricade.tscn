@@ -1,0 +1,71 @@
+[gd_scene format=3 uid="uid://df728barricade"]
+
+[ext_resource type="Script" path="res://scripts/wooden_barricade.gd" id="1_script"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gate"]
+size = Vector3(4.8, 3.2, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wood"]
+albedo_color = Color(0.44, 0.26, 0.14, 1)
+roughness = 0.88
+metallic_specular = 0.05
+
+[sub_resource type="BoxMesh" id="BoxMesh_plank_h"]
+material = SubResource("StandardMaterial3D_wood")
+size = Vector3(4.6, 0.55, 0.18)
+
+[sub_resource type="BoxMesh" id="BoxMesh_beam_v"]
+material = SubResource("StandardMaterial3D_wood")
+size = Vector3(0.35, 3.0, 0.22)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_iron"]
+albedo_color = Color(0.2, 0.22, 0.25, 1)
+metallic = 0.85
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="BoxMesh_bracket"]
+material = SubResource("StandardMaterial3D_iron")
+size = Vector3(0.12, 0.25, 0.26)
+
+[node name="WoodenBarricade" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 7
+script = ExtResource("1_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+shape = SubResource("BoxShape3D_gate")
+
+[node name="Planks" type="Node3D" parent="."]
+
+[node name="Plank1" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_plank_h")
+
+[node name="Plank2" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+mesh = SubResource("BoxMesh_plank_h")
+
+[node name="Plank3" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 0)
+mesh = SubResource("BoxMesh_plank_h")
+
+[node name="Plank4" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 0)
+mesh = SubResource("BoxMesh_plank_h")
+
+[node name="BeamLeft" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 1.5, 0.05)
+mesh = SubResource("BoxMesh_beam_v")
+
+[node name="BeamRight" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 1.5, 0.05)
+mesh = SubResource("BoxMesh_beam_v")
+
+[node name="Bracket1" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 1.2, 0.12)
+mesh = SubResource("BoxMesh_bracket")
+
+[node name="Bracket2" type="MeshInstance3D" parent="Planks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 1.2, 0.12)
+mesh = SubResource("BoxMesh_bracket")

@@ -1,0 +1,86 @@
+[gd_scene format=3 uid="uid://df717main"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/blood_manager.gd" id="2_blood_mgr"]
+[ext_resource type="PackedScene" uid="uid://df716envmap" path="res://scenes/environment_map.tscn" id="3_env_map"]
+[ext_resource type="PackedScene" uid="uid://df712player" path="res://scenes/player.tscn" id="4_player"]
+[ext_resource type="Script" path="res://scripts/camera_follow.gd" id="5_camera_follow"]
+[ext_resource type="Script" path="res://scripts/zombie_spawner.gd" id="6_spawner"]
+[ext_resource type="PackedScene" uid="uid://df715hud" path="res://scenes/ui/mobile_hud.tscn" id="7_hud"]
+[ext_resource type="PackedScene" uid="uid://sunlight_ctrl_panel_01" path="res://scenes/ui/sunlight_control_panel.tscn" id="8_sunlight_panel"]
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 1
+background_color = Color(0.82, 0.84, 0.87, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.60, 0.62, 0.68, 1)
+ambient_light_energy = 0.18
+tonemap_mode = 2
+tonemap_exposure = 0.92
+tonemap_white = 1.15
+ssao_enabled = true
+ssao_radius = 1.2
+ssao_intensity = 1.4
+ssao_power = 1.2
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.275637, -0.679717, 0.679717, 0, 0.707107, 0.707107, -0.961262, 0.194905, -0.194905, 0, 20, 0)
+light_color = Color(1, 0.98, 0.95, 1)
+light_energy = 1.95
+shadow_enabled = true
+shadow_bias = 0.015
+shadow_normal_bias = 1.5
+directional_shadow_mode = 1
+directional_shadow_split_1 = 0.35
+directional_shadow_blend_splits = false
+directional_shadow_max_distance = 100.0
+
+[node name="BloodManager" type="Node" parent="."]
+script = ExtResource("2_blood_mgr")
+
+[node name="Player" parent="." instance=ExtResource("4_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="IsometricCamera" type="Camera3D" parent="." node_paths=PackedStringArray("target")]
+transform = Transform3D(0.924, 0.224, -0.312, 0, 0.812, 0.583, 0.382, -0.538, 0.750, 18.0, 60.0, 42.0)
+keep_aspect = 0
+fov = 58.0
+far = 300.0
+script = ExtResource("5_camera_follow")
+target = NodePath("../Player")
+smooth_speed = 7.0
+offset = Vector3(18.0, 60.0, 42.0)
+
+[node name="ZombieSpawner" type="Node3D" parent="." node_paths=PackedStringArray("spawn_points")]
+script = ExtResource("6_spawner")
+max_active_zombies = 18
+spawn_interval = 1.4
+spawn_points = [NodePath("SpawnNorthAlley"), NodePath("SpawnSouth"), NodePath("SpawnEastDoor"), NodePath("SpawnCourtyard"), NodePath("SpawnTerrace"), NodePath("SpawnLowerYard")]
+
+[node name="SpawnNorthAlley" type="Marker3D" parent="ZombieSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -18)
+
+[node name="SpawnSouth" type="Marker3D" parent="ZombieSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 18)
+
+[node name="SpawnEastDoor" type="Marker3D" parent="ZombieSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.8, 0, 1.8)
+
+[node name="SpawnCourtyard" type="Marker3D" parent="ZombieSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 0, 3.0)
+
+[node name="SpawnTerrace" type="Marker3D" parent="ZombieSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, -30)
+
+[node name="SpawnLowerYard" type="Marker3D" parent="ZombieSpawner"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -42)
+
+[node name="MobileHUD" parent="." instance=ExtResource("7_hud")]
+
+[node name="SunlightControlPanel" parent="." instance=ExtResource("8_sunlight_panel")]

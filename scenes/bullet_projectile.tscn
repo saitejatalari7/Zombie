@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://df723bulletproj"]
+
+[ext_resource type="Script" path="res://scripts/bullet_projectile.gd" id="1_script"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_head"]
+albedo_color = Color(1, 0.98, 0.92, 1)
+emission_enabled = true
+emission = Color(1, 0.94, 0.82, 1)
+emission_energy_multiplier = 3.5
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_head"]
+material = SubResource("StandardMaterial3D_head")
+radius = 0.045
+height = 0.32
+radial_segments = 8
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tail"]
+transparency = 1
+albedo_color = Color(1, 0.95, 0.75, 0.65)
+emission_enabled = true
+emission = Color(1, 0.9, 0.6, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_tail"]
+material = SubResource("StandardMaterial3D_tail")
+top_radius = 0.04
+bottom_radius = 0.005
+height = 0.55
+radial_segments = 8
+
+[node name="BulletProjectile" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="BulletHead" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
+mesh = SubResource("CapsuleMesh_head")
+
+[node name="BulletTail" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0.38)
+mesh = SubResource("CylinderMesh_tail")

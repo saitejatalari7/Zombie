@@ -1,0 +1,34 @@
+[gd_scene load_steps=5 format=3 uid="uid://supplybeacon01"]
+
+[ext_resource type="Script" path="res://scripts/supply_beacon.gd" id="1_script"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_beam"]
+top_radius = 0.25
+bottom_radius = 0.35
+height = 12.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_core"]
+size = Vector3(0.4, 0.5, 0.4)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_pickup"]
+radius = 1.4
+
+[node name="SupplyBeacon" type="Node3D" groups=["supply_beacons"]]
+script = ExtResource("1_script")
+
+[node name="LightBeam" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+mesh = SubResource("CylinderMesh_beam")
+
+[node name="CoreMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_core")
+
+
+[node name="PickupArea" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PickupArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("SphereShape3D_pickup")

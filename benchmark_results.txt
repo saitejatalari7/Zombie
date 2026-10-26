@@ -1,0 +1,7 @@
+[CombatBenchmark] Results over 180 combat frames:
+  Avg Frame Time: 10.75 ms (93.0 FPS)
+  Min Frame Time: 1.93 ms (518.4 FPS)
+  Worst Spike:    19.82 ms (50.4 FPS)
+  Draw Calls:     379
+  Objects:        830
+  Primitives:     31572

@@ -1,0 +1,714 @@
+extends Control
+class_name OutpostHub
+## OutpostHub.gd
+## Central Operations Hub UI for PROTOCOL: CRIMSON.
+## Manages Command Board (Missions), Armory (Weapons & 3D Preview),
+## Operative Skills (Paired Matrix), and Base Upgrades.
+## Fully responsive between Portrait (1080x1920) and Landscape (1920x1080).
+
+# ─── Tab Enumeration ───────────────────────────────────────────────────────────
+enum Tab { COMMAND_BOARD, ARMORY, SKILLS, BASE_UPGRADES }
+var current_tab: Tab = Tab.COMMAND_BOARD
+
+# ─── Node References: Top Bar ──────────────────────────────────────────────────
+@onready var clearance_badge: Label = %ClearanceBadge
+@onready var clearance_progress: ProgressBar = %ClearanceProgress
+@onready var clearance_xp_label: Label = %ClearanceXPLabel
+@onready var coins_label: Label = %CoinsLabel
+@onready var cores_label: Label = %CoresLabel
+@onready var settings_btn: Button = %SettingsButton
+@onready var settings_modal: Control = %SettingsModal
+
+# ─── Node References: Navigation Dock ──────────────────────────────────────────
+@onready var btn_tab_command: Button = %BtnTabCommand
+@onready var btn_tab_armory: Button = %BtnTabArmory
+@onready var btn_tab_skills: Button = %BtnTabSkills
+@onready var btn_tab_upgrades: Button = %BtnTabUpgrades
+
+# ─── Node References: Tab Views ────────────────────────────────────────────────
+@onready var view_command: Control = %ViewCommand
+@onready var view_armory: Control = %ViewArmory
+@onready var view_skills: Control = %ViewSkills
+@onready var view_upgrades: Control = %ViewUpgrades
+
+# ─── Command Board Elements ───────────────────────────────────────────────────
+@onready var sector_1_btn: Button = %Sector1Btn
+@onready var sector_2_btn: Button = %Sector2Btn
+@onready var sector_3_btn: Button = %Sector3Btn
+@onready var sector_4_btn: Button = %Sector4Btn
+@onready var contract_title: Label = %ContractTitle
+@onready var contract_desc: Label = %ContractDesc
+@onready var contract_type_badge: Label = %ContractTypeBadge
+@onready var contract_threat_label: Label = %ContractThreatLabel
+@onready var contract_reward_sc: Label = %ContractRewardSC
+@onready var contract_reward_rc: Label = %ContractRewardRC
+@onready var deploy_btn: Button = %DeployButton
+
+# ─── Armory Elements ──────────────────────────────────────────────────────────
+@onready var weapon_carbine_btn: Button = %WeaponCarbineBtn
+@onready var weapon_shotgun_btn: Button = %WeaponShotgunBtn
+@onready var weapon_smg_btn: Button = %WeaponSMGBtn
+@onready var weapon_pivot: Node3D = %WeaponPivot
+@onready var weapon_model_holder: Node3D = %WeaponModelHolder
+@onready var weapon_title: Label = %WeaponTitle
+
+# Stat Tracks (Damage, Fire Rate, Penetration, Crit)
+@onready var stat_damage_bar: ProgressBar = %StatDamageBar
+@onready var stat_rate_bar: ProgressBar = %StatRateBar
+@onready var stat_pen_bar: ProgressBar = %StatPenBar
+@onready var stat_crit_bar: ProgressBar = %StatCritBar
+
+@onready var upgrade_damage_btn: Button = %UpgradeDamageBtn
+@onready var upgrade_rate_btn: Button = %UpgradeRateBtn
+@onready var upgrade_pen_btn: Button = %UpgradePenBtn
+@onready var upgrade_crit_btn: Button = %UpgradeCritBtn
+
+@onready var inspect_viewport_container: SubViewportContainer = %InspectViewportContainer
+@onready var content_area: Control = $ContentArea
+@onready var nav_box: BoxContainer = %NavBox
+
+# ─── Operative Skills Elements ────────────────────────────────────────────────
+@onready var equipped_slot_0_btn: Button = %EquippedSlot0Btn
+@onready var equipped_slot_1_btn: Button = %EquippedSlot1Btn
+@onready var active_synergy_banner: PanelContainer = %ActiveSynergyBanner
+@onready var synergy_bonus_label: Label = %SynergyBonusLabel
+@onready var skill_matrix_container: Container = %SkillMatrixContainer
+
+# ─── Base Upgrades Elements ───────────────────────────────────────────────────
+@onready var comms_level_label: Label = %CommsLevelLabel
+@onready var comms_upgrade_btn: Button = %CommsUpgradeBtn
+@onready var medbay_level_label: Label = %MedbayLevelLabel
+@onready var medbay_upgrade_btn: Button = %MedbayUpgradeBtn
+@onready var helipad_level_label: Label = %HelipadLevelLabel
+@onready var helipad_upgrade_btn: Button = %HelipadUpgradeBtn
+
+# ─── State ─────────────────────────────────────────────────────────────────────
+var selected_sector: int = 1
+var selected_weapon: String = "assault_carbine"
+var _weapon_models: Dictionary = {}
+var _active_weapon_mesh: Node3D = null
+
+# Preloaded GLB Weapon Scenes
+const SCENE_CARBINE = preload("res://assets/models/weapons/assault_carbine.glb")
+const SCENE_SHOTGUN = preload("res://assets/models/weapons/tactical_shotgun.glb")
+const SCENE_SMG = preload("res://assets/models/weapons/high_caliber_smg.glb")
+
+# ─── Canonical Skill Data (Design Doc Section 5) ──────────────────────────────
+const SKILLS_DATA: Dictionary = {
+	"blood_siphon": {
+		"name": "BLOOD SIPHON",
+		"pair": "crimson_berserker",
+		"desc": "+25% Fire Rate when standing in fresh blood pools.",
+		"cost_rc": 5,
+		"level_req": 2,
+	},
+	"hemorrhage_rounds": {
+		"name": "HEMORRHAGE ROUNDS",
+		"pair": "crimson_berserker",
+		"desc": "Zombies burst into 2x wider blood pools on death.",
+		"cost_rc": 5,
+		"level_req": 4,
+	},
+	"napalm_gel": {
+		"name": "NAPALM GEL",
+		"pair": "tactical_demolisher",
+		"desc": "Molotov fire burns 50% longer & slows targets by 40%.",
+		"cost_rc": 10,
+		"level_req": 6,
+	},
+	"thermobaric_ignition": {
+		"name": "THERMOBARIC IGNITION",
+		"pair": "tactical_demolisher",
+		"desc": "Shooting burning hostiles triggers concussive blasts.",
+		"cost_rc": 10,
+		"level_req": 8,
+	},
+	"silent_treads": {
+		"name": "SILENT TREADS",
+		"pair": "ghost_operative",
+		"desc": "Walking in blood leaves no scent tracks for Runners.",
+		"cost_rc": 15,
+		"level_req": 12,
+	},
+	"strobe_torch": {
+		"name": "STROBE TORCH",
+		"pair": "ghost_operative",
+		"desc": "In Night Ops, flashlight cone periodically stuns zombies.",
+		"cost_rc": 15,
+		"level_req": 15,
+	},
+}
+
+# ─── Lifecycle ─────────────────────────────────────────────────────────────────
+func _ready() -> void:
+	_init_weapon_models()
+	_connect_top_bar_and_dock()
+	_connect_command_board()
+	_connect_armory()
+	_connect_base_upgrades()
+	_build_skill_matrix_ui()
+	
+	# Connect to GameManager signals
+	var gm = get_node_or_null("/root/GameManager")
+	if gm:
+		gm.coins_changed.connect(_on_coins_changed)
+		gm.research_cores_changed.connect(_on_cores_changed)
+		gm.clearance_level_changed.connect(_on_clearance_changed)
+		gm.clearance_xp_changed.connect(_on_xp_changed)
+		gm.skill_equipped.connect(_on_skill_equipped)
+		gm.weapon_upgraded.connect(_on_weapon_upgraded)
+		gm.outpost_upgraded.connect(_on_outpost_upgraded)
+	
+	# Connect to OrientationManager
+	var om = get_node_or_null("/root/OrientationManager")
+	if om:
+		om.orientation_changed.connect(_on_orientation_changed)
+		_apply_responsive_layout(om.is_portrait)
+	
+	# Initial UI refresh
+	switch_tab(Tab.COMMAND_BOARD)
+	select_sector(1)
+	select_weapon("assault_carbine")
+	_refresh_top_bar()
+	_refresh_base_upgrades()
+
+
+func _process(delta: float) -> void:
+	# Rotate inspected weapon smoothly
+	if weapon_pivot and current_tab == Tab.ARMORY:
+		weapon_pivot.rotate_y(delta * 0.9)
+
+
+# ─── Navigation Dock & Tab Switching ──────────────────────────────────────────
+func switch_tab(tab: Tab) -> void:
+	current_tab = tab
+	
+	view_command.visible = (tab == Tab.COMMAND_BOARD)
+	view_armory.visible = (tab == Tab.ARMORY)
+	view_skills.visible = (tab == Tab.SKILLS)
+	view_upgrades.visible = (tab == Tab.BASE_UPGRADES)
+	
+	# Tab button active visual states
+	_update_tab_button_style(btn_tab_command, tab == Tab.COMMAND_BOARD)
+	_update_tab_button_style(btn_tab_armory, tab == Tab.ARMORY)
+	_update_tab_button_style(btn_tab_skills, tab == Tab.SKILLS)
+	_update_tab_button_style(btn_tab_upgrades, tab == Tab.BASE_UPGRADES)
+	
+	var am = get_node_or_null("/root/AudioManager")
+	if am and am.has_method("play_sfx"):
+		am.play_sfx("ui_click")
+	
+	if tab == Tab.ARMORY:
+		select_weapon(selected_weapon)
+	elif tab == Tab.SKILLS:
+		_refresh_skills_ui()
+	elif tab == Tab.BASE_UPGRADES:
+		_refresh_base_upgrades()
+
+
+func _update_tab_button_style(btn: Button, active: bool) -> void:
+	if not btn: return
+	if active:
+		btn.modulate = Color(1.0, 0.15, 0.2, 1.0)
+	else:
+		btn.modulate = Color(0.75, 0.75, 0.78, 1.0)
+
+
+# ─── Top Bar Refresh ───────────────────────────────────────────────────────────
+func _refresh_top_bar() -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm: return
+	
+	if clearance_badge:
+		clearance_badge.text = "CLR-LV.%02d" % gm.clearance_level
+	if clearance_progress:
+		var req: int = gm.get_xp_for_next_level()
+		clearance_progress.max_value = req if req > 0 else 100
+		clearance_progress.value = gm.clearance_xp
+	if clearance_xp_label:
+		clearance_xp_label.text = "%d / %d XP" % [gm.clearance_xp, gm.get_xp_for_next_level()]
+	if coins_label:
+		coins_label.text = "%d SC" % gm.survival_coins
+	if cores_label:
+		cores_label.text = "%d RC" % gm.research_cores
+
+
+func _on_coins_changed(amount: int) -> void:
+	if coins_label: coins_label.text = "%d SC" % amount
+	_refresh_armory_buttons()
+	_refresh_base_upgrades()
+
+
+func _on_cores_changed(amount: int) -> void:
+	if cores_label: cores_label.text = "%d RC" % amount
+	_refresh_skills_ui()
+
+
+func _on_clearance_changed(level: int) -> void:
+	_refresh_top_bar()
+	_refresh_sector_locks()
+	_refresh_skills_ui()
+
+
+func _on_xp_changed(current: int, req: int) -> void:
+	if clearance_progress:
+		clearance_progress.max_value = req if req > 0 else 100
+		clearance_progress.value = current
+	if clearance_xp_label:
+		clearance_xp_label.text = "%d / %d XP" % [current, req]
+
+
+# ─── Command Board (Sectors & Deploy) ─────────────────────────────────────────
+func select_sector(sector_id: int) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	var max_sec: int = gm.highest_sector_unlocked if gm else 1
+	if sector_id > max_sec:
+		return  # Locked
+	
+	selected_sector = sector_id
+	
+	# Update contract dossier details according to Sector (Section 4.1 & 4.2)
+	match sector_id:
+		1:
+			contract_title.text = "SECTOR 01: RESIDENTIAL EXTRACTION"
+			contract_desc.text = "Breach quarantine zone. Retrieve encrypted flight recorder from military lockbox and extract before runner swarms corner the corridor."
+			contract_type_badge.text = "TYPE: ASSET RECOVERY"
+			contract_threat_label.text = "THREAT: LOW [SHAMBLERS]"
+			contract_reward_sc.text = "+350 SC"
+			contract_reward_rc.text = "+1 RC"
+		2:
+			contract_title.text = "SECTOR 02: COMMERCIAL TRANSIT RESCUE"
+			contract_desc.text = "Locate barricaded survivor medic in transit terminal. Escort VIP to helipad across high-density runner corridors."
+			contract_type_badge.text = "TYPE: VIP ESCORT"
+			contract_threat_label.text = "THREAT: MEDIUM [RUNNERS]"
+			contract_reward_sc.text = "+600 SC"
+			contract_reward_rc.text = "+2 RC"
+		3:
+			contract_title.text = "SECTOR 03: BLACKOUT SILO PURGE"
+			contract_desc.text = "Night Operations mandatory. Restore power to emergency generators using gun torch, purge Crimson Boss, extract via flare."
+			contract_type_badge.text = "TYPE: NIGHT PURGE"
+			contract_threat_label.text = "THREAT: SEVERE [NIGHT OPS]"
+			contract_reward_sc.text = "+950 SC"
+			contract_reward_rc.text = "+3 RC"
+		4:
+			contract_title.text = "SECTOR 04: CRIMSON BIO-COMPLEX"
+			contract_desc.text = "Infiltrate deep containment lab. Plant centrifuge extractors on biomass nodes, defend against 3-wave containment breach, harvest cores."
+			contract_type_badge.text = "TYPE: BIO-LAB HARVEST"
+			contract_threat_label.text = "THREAT: CRITICAL [BOSS BREACH]"
+			contract_reward_sc.text = "+1500 SC"
+			contract_reward_rc.text = "+6 RC"
+
+	_refresh_sector_locks()
+
+
+func _refresh_sector_locks() -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	var max_sec: int = gm.highest_sector_unlocked if gm else 1
+	
+	if sector_1_btn: sector_1_btn.disabled = (1 > max_sec)
+	if sector_2_btn: sector_2_btn.disabled = (2 > max_sec)
+	if sector_3_btn: sector_3_btn.disabled = (3 > max_sec)
+	if sector_4_btn: sector_4_btn.disabled = (4 > max_sec)
+	
+	if sector_1_btn: sector_1_btn.modulate = Color(1, 0.2, 0.2) if selected_sector == 1 else Color(1, 1, 1)
+	if sector_2_btn: sector_2_btn.modulate = Color(1, 0.2, 0.2) if selected_sector == 2 else Color(1, 1, 1)
+	if sector_3_btn: sector_3_btn.modulate = Color(1, 0.2, 0.2) if selected_sector == 3 else Color(1, 1, 1)
+	if sector_4_btn: sector_4_btn.modulate = Color(1, 0.2, 0.2) if selected_sector == 4 else Color(1, 1, 1)
+
+
+func _on_deploy_pressed() -> void:
+	var am = get_node_or_null("/root/AudioManager")
+	if am and am.has_method("play_sfx"):
+		am.play_sfx("ui_confirm")
+		if am.has_method("haptic_medium"):
+			am.haptic_medium()
+	
+	var gm = get_node_or_null("/root/GameManager")
+	if gm:
+		gm.current_sector = selected_sector
+		gm.current_contract = {
+			"sector": selected_sector,
+			"title": contract_title.text if contract_title else "CONTRACT",
+			"type": contract_type_badge.text if contract_type_badge else "ASSET RECOVERY",
+			"threat": contract_threat_label.text if contract_threat_label else "LOW",
+			"is_night": (selected_sector == 3)
+		}
+	
+	var dnm = get_node_or_null("/root/DayNightManager")
+	if dnm:
+		dnm.set_sector_mode(selected_sector)
+	
+	var ls = get_node_or_null("/root/LoadingScreen")
+	if ls and ls.has_method("transition_to_scene"):
+		ls.transition_to_scene("res://scenes/main.tscn")
+	else:
+		get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+# ─── Armory (3D Weapon Inspection & Upgrades) ─────────────────────────────────
+func _init_weapon_models() -> void:
+	_weapon_models["assault_carbine"] = SCENE_CARBINE.instantiate()
+	_weapon_models["tactical_shotgun"] = SCENE_SHOTGUN.instantiate()
+	_weapon_models["high_caliber_smg"] = SCENE_SMG.instantiate()
+	
+	for key in _weapon_models:
+		var node: Node3D = _weapon_models[key]
+		node.visible = false
+		weapon_model_holder.add_child(node)
+
+
+func select_weapon(weapon_id: String) -> void:
+	selected_weapon = weapon_id
+	
+	# Swap 3D model
+	for key in _weapon_models:
+		var node: Node3D = _weapon_models[key]
+		node.visible = (key == weapon_id)
+		if key == weapon_id:
+			_active_weapon_mesh = node
+	
+	if weapon_title:
+		match weapon_id:
+			"assault_carbine": weapon_title.text = "ARC-15 ASSAULT CARBINE"
+			"tactical_shotgun": weapon_title.text = "TS-12 BREACHING SHOTGUN"
+			"high_caliber_smg": weapon_title.text = "VECTOR-50 HEAVY SMG"
+	
+	# Update selector button highlights
+	weapon_carbine_btn.modulate = Color(1, 0.1, 0.2) if weapon_id == "assault_carbine" else Color(1, 1, 1)
+	weapon_shotgun_btn.modulate = Color(1, 0.1, 0.2) if weapon_id == "tactical_shotgun" else Color(1, 1, 1)
+	weapon_smg_btn.modulate = Color(1, 0.1, 0.2) if weapon_id == "high_caliber_smg" else Color(1, 1, 1)
+	
+	_refresh_armory_buttons()
+
+
+func _refresh_armory_buttons() -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm: return
+	
+	var dmg_lv: int = gm.get_weapon_upgrade_level(selected_weapon, "damage_knockback")
+	var rate_lv: int = gm.get_weapon_upgrade_level(selected_weapon, "fire_rate_mag")
+	var pen_lv: int = gm.get_weapon_upgrade_level(selected_weapon, "penetration")
+	var crit_lv: int = gm.get_weapon_upgrade_level(selected_weapon, "crit_autoaim")
+	
+	stat_damage_bar.value = dmg_lv * 10
+	stat_rate_bar.value = rate_lv * 10
+	stat_pen_bar.value = pen_lv * 10
+	stat_crit_bar.value = crit_lv * 10
+	
+	_setup_upgrade_button(upgrade_damage_btn, dmg_lv, "OVERPRESSURE ROUNDS", gm.survival_coins)
+	_setup_upgrade_button(upgrade_rate_btn, rate_lv, "EXTENDED DRUM", gm.survival_coins)
+	_setup_upgrade_button(upgrade_pen_btn, pen_lv, "PIERCING CORE", gm.survival_coins)
+	_setup_upgrade_button(upgrade_crit_btn, crit_lv, "LASER TARGETER", gm.survival_coins)
+
+
+func _setup_upgrade_button(btn: Button, level: int, title: String, user_sc: int) -> void:
+	if not btn: return
+	if level >= 10:
+		btn.text = "%s [MAX TIER]" % title
+		btn.disabled = true
+	else:
+		var cost: int = (level + 1) * 150
+		btn.text = "%s [LV.%d] — %d SC" % [title, level + 1, cost]
+		btn.disabled = (user_sc < cost)
+
+
+func _on_upgrade_stat(track: String) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm: return
+	var current_lv: int = gm.get_weapon_upgrade_level(selected_weapon, track)
+	var cost: int = (current_lv + 1) * 150
+	if gm.upgrade_weapon(selected_weapon, track, cost):
+		var am = get_node_or_null("/root/AudioManager")
+		if am and am.has_method("play_sfx"):
+			am.play_sfx("ui_confirm")
+		_refresh_armory_buttons()
+
+
+func _on_weapon_upgraded(_w: String, _t: String, _l: int) -> void:
+	_refresh_armory_buttons()
+
+
+# ─── Operative Skills Matrix ──────────────────────────────────────────────────
+func _build_skill_matrix_ui() -> void:
+	# Clear placeholder children
+	for child in skill_matrix_container.get_children():
+		child.queue_free()
+	
+	for skill_id in SKILLS_DATA:
+		var data: Dictionary = SKILLS_DATA[skill_id]
+		
+		var card := PanelContainer.new()
+		card.custom_minimum_size = Vector2(280, 110)
+		
+		var vbox := VBoxContainer.new()
+		vbox.set("theme_override_constants/separation", 6)
+		
+		var header := Label.new()
+		header.text = data["name"]
+		header.set("theme_override_colors/font_color", Color(0.95, 0.95, 0.97))
+		header.set("theme_override_font_sizes/font_size", 14)
+		vbox.add_child(header)
+		
+		var desc := Label.new()
+		desc.text = data["desc"]
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc.set("theme_override_colors/font_color", Color(0.65, 0.65, 0.68))
+		desc.set("theme_override_font_sizes/font_size", 11)
+		vbox.add_child(desc)
+		
+		var action_btn := Button.new()
+		action_btn.name = "ActionBtn"
+		action_btn.custom_minimum_size = Vector2(0, 32)
+		action_btn.pressed.connect(_on_skill_action_pressed.bind(skill_id))
+		vbox.add_child(action_btn)
+		
+		card.add_child(vbox)
+		card.set_meta("skill_id", skill_id)
+		skill_matrix_container.add_child(card)
+	
+	_refresh_skills_ui()
+
+
+func _refresh_skills_ui() -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm: return
+	
+	# Update top 2 equipped slots
+	var eq: Array[String] = gm.get_equipped_skills()
+	var s0_name: String = SKILLS_DATA[eq[0]]["name"] if SKILLS_DATA.has(eq[0]) else (eq[0].to_upper() if eq[0] != "" else "[ EMPTY ]")
+	var s1_name: String = SKILLS_DATA[eq[1]]["name"] if SKILLS_DATA.has(eq[1]) else (eq[1].to_upper() if eq[1] != "" else "[ EMPTY ]")
+	equipped_slot_0_btn.text = "SLOT 1: %s" % s0_name
+	equipped_slot_1_btn.text = "SLOT 2: %s" % s1_name
+	
+	# Detect canonical pair synergies
+	var pair_set := {}
+	if eq[0] != "": pair_set[eq[0]] = true
+	if eq[1] != "": pair_set[eq[1]] = true
+	
+	if active_synergy_banner:
+		if pair_set.has("blood_siphon") and pair_set.has("hemorrhage_rounds"):
+			active_synergy_banner.visible = true
+			synergy_bonus_label.text = "⚡ CRIMSON BERSERKER ACTIVE: +25% Fire Rate & 2x Blood Pool Radius"
+		elif pair_set.has("napalm_gel") and pair_set.has("thermobaric_ignition"):
+			active_synergy_banner.visible = true
+			synergy_bonus_label.text = "⚡ TACTICAL DEMOLISHER ACTIVE: +50% Burn Time & Concussive Chain Blasts"
+		elif pair_set.has("silent_treads") and pair_set.has("strobe_torch"):
+			active_synergy_banner.visible = true
+			synergy_bonus_label.text = "⚡ GHOST OPERATIVE ACTIVE: Runner Scent Camouflage & Strobe Cone Stun"
+		else:
+			active_synergy_banner.visible = false
+	
+	# Update all skill cards
+	for card in skill_matrix_container.get_children():
+		var skill_id: String = card.get_meta("skill_id")
+		var data: Dictionary = SKILLS_DATA[skill_id]
+		var btn: Button = card.find_child("ActionBtn")
+		if not btn: continue
+		
+		var is_unlocked: bool = gm.is_skill_unlocked(skill_id)
+		var is_equipped: bool = (eq[0] == skill_id or eq[1] == skill_id)
+		
+		if is_equipped:
+			btn.text = "EQUIPPED [TAP TO UNEQUIP]"
+			btn.modulate = Color(1, 0.1, 0.2)
+			btn.disabled = false
+		elif is_unlocked:
+			btn.text = "EQUIP SKILL"
+			btn.modulate = Color(0.2, 0.9, 0.3)
+			btn.disabled = false
+		else:
+			# Locked
+			if gm.clearance_level < data["level_req"]:
+				btn.text = "REQ: CLR-LV.%d" % data["level_req"]
+				btn.modulate = Color(0.5, 0.5, 0.5)
+				btn.disabled = true
+			else:
+				btn.text = "UNLOCK [%d RC]" % data["cost_rc"]
+				btn.modulate = Color(1, 0.7, 0.1)
+				btn.disabled = (gm.research_cores < data["cost_rc"])
+
+
+func _on_skill_action_pressed(skill_id: String) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm: return
+	
+	var eq: Array[String] = gm.get_equipped_skills()
+	if eq[0] == skill_id:
+		gm.unequip_skill(0)
+		_refresh_skills_ui()
+		return
+	if eq[1] == skill_id:
+		gm.unequip_skill(1)
+		_refresh_skills_ui()
+		return
+	
+	if gm.is_skill_unlocked(skill_id):
+		# Equip in slot 0 or slot 1
+		if eq[0] == "":
+			gm.equip_skill(0, skill_id)
+		else:
+			gm.equip_skill(1, skill_id)
+	else:
+		# Unlock with RC
+		var cost: int = SKILLS_DATA[skill_id]["cost_rc"]
+		if gm.spend_research_cores(cost):
+			gm.unlock_skill(skill_id)
+			if eq[0] == "":
+				gm.equip_skill(0, skill_id)
+			elif eq[1] == "":
+				gm.equip_skill(1, skill_id)
+	
+	_refresh_skills_ui()
+
+
+func _on_skill_equipped(_slot: int, _id: String) -> void:
+	_refresh_skills_ui()
+
+
+# ─── Outpost Upgrades ─────────────────────────────────────────────────────────
+func _refresh_base_upgrades() -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm: return
+	
+	var comms_lv: int = gm.get_outpost_level("comms_array")
+	var medbay_lv: int = gm.get_outpost_level("medbay")
+	var helipad_lv: int = gm.get_outpost_level("helipad")
+	
+	comms_level_label.text = "COMMS ARRAY // TIER %d/5\n+15%% Contract Payouts & Threat Scans" % comms_lv
+	medbay_level_label.text = "FIELD MEDBAY // TIER %d/5\n+20 Starting Armor & Emergency Stim" % medbay_lv
+	helipad_level_label.text = "TACTICAL HELIPAD // TIER %d/5\n-3s Evac Timer & Flare Reinforcements" % helipad_lv
+	
+	_setup_base_upgrade_btn(comms_upgrade_btn, comms_lv, gm.survival_coins, gm.research_cores)
+	_setup_base_upgrade_btn(medbay_upgrade_btn, medbay_lv, gm.survival_coins, gm.research_cores)
+	_setup_base_upgrade_btn(helipad_upgrade_btn, helipad_lv, gm.survival_coins, gm.research_cores)
+
+
+func _setup_base_upgrade_btn(btn: Button, level: int, user_sc: int, user_rc: int) -> void:
+	if not btn: return
+	if level >= 5:
+		btn.text = "MAX TIER REACHED"
+		btn.disabled = true
+	else:
+		var cost_sc: int = (level + 1) * 400
+		var cost_rc: int = (level + 1) * 2
+		btn.text = "UPGRADE [%d SC + %d RC]" % [cost_sc, cost_rc]
+		btn.disabled = (user_sc < cost_sc or user_rc < cost_rc)
+
+
+func _on_upgrade_outpost_facility(facility: String) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm: return
+	var cur_lv: int = gm.get_outpost_level(facility)
+	var cost_sc: int = (cur_lv + 1) * 400
+	var cost_rc: int = (cur_lv + 1) * 2
+	if gm.upgrade_outpost(facility, cost_sc, cost_rc):
+		var am = get_node_or_null("/root/AudioManager")
+		if am and am.has_method("play_sfx"):
+			am.play_sfx("ui_confirm")
+		_refresh_base_upgrades()
+
+
+func _on_outpost_upgraded(_fac: String, _lv: int) -> void:
+	_refresh_base_upgrades()
+
+
+# ─── Responsive Layout (Portrait vs Landscape) ────────────────────────────────
+func _on_orientation_changed(is_portrait: bool) -> void:
+	_apply_responsive_layout(is_portrait)
+
+
+func _apply_responsive_layout(is_portrait: bool) -> void:
+	var om = get_node_or_null("/root/OrientationManager")
+	var margins: Dictionary = om.get_ui_safe_margins() if om else {"top": 80, "bottom": 40, "left": 24, "right": 24}
+	
+	# Adjust dock position & orientation: Bottom (horizontal) in Portrait, Left Dock (vertical) in Landscape
+	var nav_dock: Control = %NavDock
+	if nav_dock:
+		if is_portrait:
+			nav_dock.anchors_preset = Control.PRESET_BOTTOM_WIDE
+			nav_dock.offset_top = -100
+			nav_dock.offset_bottom = -margins["bottom"]
+			nav_dock.offset_left = margins["left"]
+			nav_dock.offset_right = -margins["right"]
+			if nav_box:
+				nav_box.vertical = false
+			if content_area:
+				content_area.offset_left = 0
+				content_area.offset_bottom = -110
+		else:
+			nav_dock.anchors_preset = Control.PRESET_LEFT_WIDE
+			nav_dock.offset_left = margins["left"]
+			nav_dock.offset_right = 260
+			nav_dock.offset_top = 100
+			nav_dock.offset_bottom = -margins["bottom"]
+			if nav_box:
+				nav_box.vertical = true
+			if content_area:
+				content_area.offset_left = 280
+				content_area.offset_bottom = -margins["bottom"]
+
+
+# ─── Signal Connections ────────────────────────────────────────────────────────
+func _connect_top_bar_and_dock() -> void:
+	if settings_btn:
+		settings_btn.pressed.connect(func(): if settings_modal: settings_modal.open())
+	
+	btn_tab_command.pressed.connect(func(): switch_tab(Tab.COMMAND_BOARD))
+	btn_tab_armory.pressed.connect(func(): switch_tab(Tab.ARMORY))
+	btn_tab_skills.pressed.connect(func(): switch_tab(Tab.SKILLS))
+	btn_tab_upgrades.pressed.connect(func(): switch_tab(Tab.BASE_UPGRADES))
+	
+	if equipped_slot_0_btn:
+		equipped_slot_0_btn.pressed.connect(func(): _on_slot_unequip_pressed(0))
+	if equipped_slot_1_btn:
+		equipped_slot_1_btn.pressed.connect(func(): _on_slot_unequip_pressed(1))
+
+
+func _on_slot_unequip_pressed(slot: int) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if gm:
+		gm.unequip_skill(slot)
+		var am = get_node_or_null("/root/AudioManager")
+		if am and am.has_method("play_sfx"):
+			am.play_sfx("ui_click")
+		_refresh_skills_ui()
+
+
+func _connect_command_board() -> void:
+	sector_1_btn.pressed.connect(func(): select_sector(1))
+	sector_2_btn.pressed.connect(func(): select_sector(2))
+	sector_3_btn.pressed.connect(func(): select_sector(3))
+	sector_4_btn.pressed.connect(func(): select_sector(4))
+	deploy_btn.pressed.connect(_on_deploy_pressed)
+
+
+func _connect_armory() -> void:
+	weapon_carbine_btn.pressed.connect(func(): select_weapon("assault_carbine"))
+	weapon_shotgun_btn.pressed.connect(func(): select_weapon("tactical_shotgun"))
+	weapon_smg_btn.pressed.connect(func(): select_weapon("high_caliber_smg"))
+	
+	upgrade_damage_btn.pressed.connect(func(): _on_upgrade_stat("damage_knockback"))
+	upgrade_rate_btn.pressed.connect(func(): _on_upgrade_stat("fire_rate_mag"))
+	upgrade_pen_btn.pressed.connect(func(): _on_upgrade_stat("penetration"))
+	upgrade_crit_btn.pressed.connect(func(): _on_upgrade_stat("crit_autoaim"))
+	
+	if inspect_viewport_container:
+		inspect_viewport_container.gui_input.connect(_on_viewport_gui_input)
+
+
+func _on_viewport_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenDrag:
+		if weapon_pivot:
+			weapon_pivot.rotate_y(event.relative.x * 0.01)
+			weapon_pivot.rotate_x(event.relative.y * 0.005)
+	elif event is InputEventMouseMotion:
+		if (event.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+			if weapon_pivot:
+				weapon_pivot.rotate_y(event.relative.x * 0.01)
+				weapon_pivot.rotate_x(event.relative.y * 0.005)
+
+
+func _connect_base_upgrades() -> void:
+	comms_upgrade_btn.pressed.connect(func(): _on_upgrade_outpost_facility("comms_array"))
+	medbay_upgrade_btn.pressed.connect(func(): _on_upgrade_outpost_facility("medbay"))
+	helipad_upgrade_btn.pressed.connect(func(): _on_upgrade_outpost_facility("helipad"))

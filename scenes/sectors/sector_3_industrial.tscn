@@ -1,0 +1,140 @@
+[gd_scene format=3 uid="uid://sec3industrial"]
+
+[ext_resource type="Script" path="res://scripts/sector_base.gd" id="1_sec_base"]
+[ext_resource type="PackedScene" path="res://assets/models/props/chemical_silo.glb" id="2_silo"]
+[ext_resource type="PackedScene" path="res://assets/models/props/shipping_container.glb" id="3_container"]
+[ext_resource type="PackedScene" path="res://assets/models/props/power_pole.glb" id="4_power_pole"]
+[ext_resource type="PackedScene" path="res://assets/models/props/dead_tree_b.glb" id="5_tree_b"]
+[ext_resource type="PackedScene" path="res://assets/models/props/streetlamp.glb" id="6_streetlamp"]
+[ext_resource type="PackedScene" path="res://assets/models/sectors/modular_wall.glb" id="7_mod_wall"]
+[ext_resource type="PackedScene" path="res://assets/models/sectors/modular_floor.glb" id="8_mod_floor"]
+[ext_resource type="Material" path="res://assets/materials/mat_street_floor.tres" id="9_mat_floor"]
+[ext_resource type="Material" path="res://assets/materials/mat_white_clay.tres" id="10_mat_white"]
+
+[sub_resource type="Environment" id="Environment_sec3"]
+background_mode = 1
+background_color = Color(0.02, 0.02, 0.03, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.02, 0.02, 0.03, 1)
+ambient_light_energy = 0.06
+tonemap_mode = 2
+tonemap_exposure = 1.0
+tonemap_white = 1.15
+
+[sub_resource type="BoxMesh" id="BoxMesh_ground"]
+material = ExtResource("9_mat_floor")
+size = Vector3(65, 0.5, 95)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(65, 0.5, 95)
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_sec3"]
+agent_height = 1.8
+agent_radius = 0.4
+agent_max_climb = 0.45
+agent_max_slope = 45.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_extract"]
+material = ExtResource("10_mat_white")
+top_radius = 3.8
+bottom_radius = 3.8
+height = 0.1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_extract"]
+size = Vector3(7.6, 3, 7.6)
+
+[node name="Sector3Industrial" type="Node3D"]
+script = ExtResource("1_sec_base")
+sector_id = 3
+sector_name = "SECTOR 03: BLACKOUT INDUSTRIAL ZONE"
+is_night_sector = true
+sector_bounds = Rect2(-30, -45, 60, 90)
+
+
+
+[node name="PlayerSpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 28)
+
+[node name="ExtractionZone" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -36)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ExtractionZone"]
+mesh = SubResource("CylinderMesh_extract")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ExtractionZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("BoxShape3D_extract")
+
+[node name="ZombieSpawners" type="Node3D" parent="."]
+
+[node name="SpawnSiloComplexNorth" type="Marker3D" parent="ZombieSpawners"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -28)
+
+[node name="SpawnContainerAlleyEast" type="Marker3D" parent="ZombieSpawners"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -12)
+
+[node name="SpawnHazardBayWest" type="Marker3D" parent="ZombieSpawners"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, 8)
+
+[node name="SpawnRailYardEast" type="Marker3D" parent="ZombieSpawners"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 18)
+
+[node name="SpawnSouthAirlock" type="Marker3D" parent="ZombieSpawners"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 38)
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_sec3")
+
+[node name="Ground" type="StaticBody3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/Ground"]
+mesh = SubResource("BoxMesh_ground")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Ground"]
+shape = SubResource("BoxShape3D_ground")
+
+[node name="Architecture" type="Node3D" parent="NavigationRegion3D"]
+
+[node name="PerimeterWallWest" parent="NavigationRegion3D/Architecture" instance=ExtResource("7_mod_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -5)
+
+[node name="PerimeterWallEast" parent="NavigationRegion3D/Architecture" instance=ExtResource("7_mod_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0, -5)
+
+[node name="LoadingDockFloor" parent="NavigationRegion3D/Architecture" instance=ExtResource("8_mod_floor")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 0)
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="ChemicalSilo1" parent="Props" instance=ExtResource("2_silo")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -18)
+
+[node name="ChemicalSilo2" parent="Props" instance=ExtResource("2_silo")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -6)
+
+[node name="ShippingContainer1" parent="Props" instance=ExtResource("3_container")]
+transform = Transform3D(0.965926, 0, 0.258819, 0, 1, 0, -0.258819, 0, 0.965926, 8, 0, -14)
+
+[node name="ShippingContainer2" parent="Props" instance=ExtResource("3_container")]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 10, 0, 2)
+
+[node name="ShippingContainer3" parent="Props" instance=ExtResource("3_container")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 16)
+
+[node name="PowerPole1" parent="Props" instance=ExtResource("4_power_pole")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 20)
+
+[node name="PowerPole2" parent="Props" instance=ExtResource("4_power_pole")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -26)
+
+[node name="DeadTree1" parent="Props" instance=ExtResource("5_tree_b")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 18)
+
+[node name="Streetlamps" type="Node3D" parent="Props"]
+
+[node name="Streetlamp1" parent="Props/Streetlamps" instance=ExtResource("6_streetlamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8)
+
+[node name="Streetlamp2" parent="Props/Streetlamps" instance=ExtResource("6_streetlamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)

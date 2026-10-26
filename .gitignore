@@ -1,0 +1,20 @@
+# Godot
+.godot/
+.import/
+*.translation
+export_credentials.cfg
+.mono/
+data_*/
+
+# Build outputs
+*.apk
+*.aab
+*.idsig
+*.exe
+*.pck
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

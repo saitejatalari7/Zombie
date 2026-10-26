@@ -1,0 +1,65 @@
+[gd_scene load_steps=8 format=3 uid="uid://df712player"]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_script"]
+[ext_resource type="Material" uid="uid://df702zombiebody" path="res://assets/materials/mat_zombie_body.tres" id="3_mat_dark"]
+[ext_resource type="Material" path="res://assets/materials/mat_player_ring.tres" id="5_mat_ring"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/player_operative.glb" id="6_player_glb"]
+[ext_resource type="PackedScene" path="res://assets/models/weapons/assault_carbine.glb" id="7_carbine_glb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.35
+height = 1.7
+
+[sub_resource type="TorusMesh" id="TorusMesh_ring"]
+material = ExtResource("5_mat_ring")
+inner_radius = 0.62
+outer_radius = 0.72
+rings = 24
+ring_segments = 4
+
+[sub_resource type="PrismMesh" id="PrismMesh_pointer"]
+material = ExtResource("5_mat_ring")
+size = Vector3(0.24, 0.28, 0.05)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_launcher"]
+material = ExtResource("3_mat_dark")
+top_radius = 0.09
+bottom_radius = 0.09
+height = 0.55
+
+[node name="Player" type="CharacterBody3D" groups=["player"]]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="Model" parent="Visuals" instance=ExtResource("6_player_glb")]
+
+[node name="GroundRing" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+mesh = SubResource("TorusMesh_ring")
+
+[node name="RingPointer" type="MeshInstance3D" parent="Visuals/GroundRing"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.02, -0.82)
+mesh = SubResource("PrismMesh_pointer")
+
+[node name="Rifle" type="Node3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, 0.9, -0.38)
+
+[node name="CarbineMesh" parent="Visuals/Rifle" instance=ExtResource("7_carbine_glb")]
+
+[node name="Muzzle" type="Marker3D" parent="Visuals/Rifle"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, -0.62)
+
+[node name="Launcher" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, -0.22, 1.15, -0.2)
+mesh = SubResource("CylinderMesh_launcher")
+
+[node name="Muzzle" type="Marker3D" parent="Visuals/Launcher"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+

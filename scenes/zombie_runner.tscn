@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://df714runner"]
+
+[ext_resource type="Script" path="res://scripts/zombie.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/zombie_runner.glb" id="2_runner_glb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_runner"]
+radius = 0.28
+height = 1.5
+
+[node name="ZombieRunner" type="CharacterBody3D" groups=["runners", "zombies"]]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_script")
+base_speed = 1.8
+max_health = 60.0
+attack_damage = 8.0
+attack_range = 1.2
+attack_cooldown = 0.75
+attack_windup_time = 0.25
+stagger_duration = 0.10
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("CapsuleShape3D_runner")
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="Model" parent="Visuals" instance=ExtResource("2_runner_glb")]
