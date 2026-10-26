@@ -42,6 +42,7 @@ var _nav_row: HBoxContainer = null
 var _weapon_pivot: Node3D = null
 var _refresh_queued: bool = false
 var _swipe_from: float = -1.0
+var _sway_t: float = 0.0
 
 
 func _ready() -> void:
@@ -91,7 +92,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if current_tab == Tab.ARMORY and is_instance_valid(_weapon_pivot):
-		_weapon_pivot.rotate_y(delta * 0.8)
+		# Gentle sway rather than a full spin, so the gun never turns end-on
+		_sway_t += delta
+		_weapon_pivot.rotation.y = sin(_sway_t * 0.7) * 0.5
 
 
 func _queue_refresh() -> void:
@@ -411,9 +414,9 @@ func _sector_pager(sectors: Array) -> Control:
 	var row := UIKit.hbox(28)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	var idx := sectors.find(selected_sector)
-	var prev := UIKit.button("‹", "GhostButton", 100)
+	var prev := UIKit.button("", "GhostButton", 100, "chevron_left")
 	prev.custom_minimum_size.x = 140
-	prev.add_theme_font_size_override("font_size", 80)
+	prev.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prev.disabled = idx <= 0
 	prev.pressed.connect(_step_sector.bind(-1))
 	row.add_child(prev)
@@ -429,9 +432,9 @@ func _sector_pager(sectors: Array) -> Control:
 		d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		dots.add_child(d)
 	row.add_child(dots)
-	var next := UIKit.button("›", "GhostButton", 100)
+	var next := UIKit.button("", "GhostButton", 100, "chevron_right")
 	next.custom_minimum_size.x = 140
-	next.add_theme_font_size_override("font_size", 80)
+	next.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	next.disabled = idx >= sectors.size() - 1
 	next.pressed.connect(_step_sector.bind(1))
 	row.add_child(next)
@@ -665,13 +668,13 @@ func _deploy(c: Dictionary) -> void:
 # ─── Armory ───────────────────────────────────────────────────────────────────
 func _build_armory() -> void:
 	var col := _scroll_column()
-	col.add_child(_header("ARMORY", UIKit.currency("coin", gm.survival_coins if gm else 0, UIKit.AMBER)))
+	col.add_child(_header("ARMORY", null))
 
 	# 3D weapon viewer
 	var frame := PanelContainer.new()
-	var fs := StyleBoxFlat.new()
-	fs.bg_color = UIKit.PANEL_2
+	var fs := UIKit.rounded(UIKit.PANEL_2, UIKit.RADIUS)
 	frame.add_theme_stylebox_override("panel", fs)
+	frame.clip_contents = true
 	frame.custom_minimum_size = Vector2(0, 420)
 	col.add_child(frame)
 	var view := SubViewportContainer.new()
@@ -684,14 +687,16 @@ func _build_armory() -> void:
 	view.add_child(vp)
 	var cam := Camera3D.new()
 	cam.fov = 40.0
-	cam.transform = Transform3D(Basis(), Vector3(0.45, 0.6, 2.2)).looking_at(Vector3(0.0, 0.1, 0.0), Vector3.UP)
+	cam.transform = Transform3D(Basis(), Vector3(0.0, 0.7, 2.4)).looking_at(Vector3.ZERO, Vector3.UP)
 	vp.add_child(cam)
 	var sun := DirectionalLight3D.new()
 	sun.light_energy = 1.4
 	sun.transform = Transform3D(Basis(), Vector3(2, 4, 3)).looking_at(Vector3.ZERO, Vector3.UP)
 	vp.add_child(sun)
 	_weapon_pivot = Node3D.new()
-	_weapon_pivot.add_child(CARBINE_SCENE.instantiate())
+	var gun := CARBINE_SCENE.instantiate() as Node3D
+	_weapon_pivot.add_child(gun)
+	_fit_model(gun, 1.7)
 	vp.add_child(_weapon_pivot)
 	var caption := UIKit.hbox(16)
 	caption.size_flags_vertical = Control.SIZE_SHRINK_END
@@ -725,6 +730,35 @@ func _build_armory() -> void:
 		col.add_child(card)
 
 
+## Centres a model on its pivot and scales its longest side to `length` metres,
+## so the viewer frames any weapon the same way. Lays the barrel along X.
+func _fit_model(model: Node3D, length: float) -> void:
+	var bounds := AABB()
+	var first := true
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh_inst := mi as MeshInstance3D
+		if not mesh_inst.mesh:
+			continue
+		var xf := Transform3D()
+		var n: Node = mesh_inst
+		while n and n != model.get_parent():
+			if n is Node3D:
+				xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		var box: AABB = xf * mesh_inst.get_aabb()
+		bounds = box if first else bounds.merge(box)
+		first = false
+	if first:
+		return
+	if bounds.size.z > bounds.size.x:
+		model.rotate_y(PI * 0.5)  # barrel along Z: turn it side-on
+		bounds = Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3.ZERO) * bounds
+	var longest := maxf(bounds.size.x, maxf(bounds.size.y, bounds.size.z))
+	var k := length / maxf(longest, 0.001)
+	model.scale *= k
+	model.position = -bounds.get_center() * k
+
+
 func _on_upgrade_weapon(weapon: String, track: String, cost: int) -> void:
 	if gm and gm.upgrade_weapon(weapon, track, cost):
 		var am = get_node_or_null("/root/AudioManager")
@@ -736,7 +770,7 @@ func _on_upgrade_weapon(weapon: String, track: String, cost: int) -> void:
 # ─── Skills ───────────────────────────────────────────────────────────────────
 func _build_skills() -> void:
 	var col := _scroll_column()
-	col.add_child(_header("SKILLS", UIKit.currency("core", gm.research_cores if gm else 0, UIKit.CRIMSON)))
+	col.add_child(_header("SKILLS", null))
 	if not gm:
 		return
 	var eq: Array = gm.get_equipped_skills()
@@ -753,11 +787,10 @@ func _build_skills() -> void:
 		slot.disabled = not filled
 		slot.pressed.connect(_on_unequip.bind(i))
 		var bg := PanelContainer.new()
-		var st := StyleBoxFlat.new()
-		st.bg_color = UIKit.PANEL_2 if filled else Color(0.086, 0.086, 0.098)
+		var st := UIKit.rounded(UIKit.PANEL_2 if filled else UIKit.PANEL, 28)
 		st.border_color = UIKit.CRIMSON if filled else UIKit.LINE
 		st.set_border_width_all(4 if filled else 2)
-		st.set_content_margin_all(20)
+		st.set_content_margin_all(28)
 		bg.add_theme_stylebox_override("panel", st)
 		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -842,11 +875,7 @@ func _on_unlock_skill(skill_id: String, cost: int) -> void:
 # ─── Outpost ──────────────────────────────────────────────────────────────────
 func _build_outpost() -> void:
 	var col := _scroll_column()
-	var cur := UIKit.hbox(24)
-	if gm:
-		cur.add_child(UIKit.currency("coin", gm.survival_coins, UIKit.AMBER))
-		cur.add_child(UIKit.currency("core", gm.research_cores, UIKit.CRIMSON))
-	col.add_child(_header("OUTPOST", cur))
+	col.add_child(_header("OUTPOST", null))
 	if not gm:
 		return
 	for facility in GameManager.OUTPOST_FACILITIES:

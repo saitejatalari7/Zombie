@@ -26,7 +26,9 @@ func _process(delta: float) -> void:
 func _apply_camera_framing() -> void:
 	if not camera:
 		return
-	camera.fov = 55.0
-	_base_cam_pos = Vector3(10.5, 12.0, 10.5)
+	# Portrait: fit the pad to the screen width so the whole outpost reads behind the logo
+	camera.keep_aspect = Camera3D.KEEP_WIDTH
+	camera.fov = 50.0
+	_base_cam_pos = Vector3(15.0, 17.0, 15.0)
 	camera.position = _base_cam_pos
 	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)

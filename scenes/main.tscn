@@ -48,8 +48,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="IsometricCamera" type="Camera3D" parent="." node_paths=PackedStringArray("target")]
 transform = Transform3D(0.924, 0.224, -0.312, 0, 0.812, 0.583, 0.382, -0.538, 0.750, 9.9, 33.0, 23.1)
-keep_aspect = 0
-fov = 58.0
+keep_aspect = 1
+fov = 52.0
 far = 300.0
 script = ExtResource("5_camera_follow")
 target = NodePath("../Player")

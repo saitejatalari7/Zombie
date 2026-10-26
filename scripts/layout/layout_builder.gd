@@ -301,7 +301,7 @@ func _build_room(r: Dictionary) -> void:
 				if sp[1] - maxf(sp[0], g1) > 0.01:
 					cut.append([maxf(sp[0], g1), sp[1]])
 			spans = cut
-		var near_side := side == "south" or side == "east"
+		var near_side: bool = side == "south" or side == "east"
 		for sp in spans:
 			_room_wall(room, pieces, w, axis, sp[0], sp[1], base, base + h, near_side, true)
 		for g in gaps:  # lintel above each doorway

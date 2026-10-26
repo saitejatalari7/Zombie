@@ -558,8 +558,9 @@ func show_mission_result(summary: Dictionary) -> void:
 			rv.add_child(_result_row("Contract", contract_text, UIKit.TEXT))
 			rv.add_child(_result_row("Kills (%d)" % int(summary.get("kill_count", 0)), "+%s" % UIKit.fmt_int(int(summary.get("kill_sc", 0))), UIKit.TEXT))
 		else:
-			rv.add_child(_result_row("Kills (%d)" % int(summary.get("kill_count", 0)), "", UIKit.TEXT))
-			rv.add_child(_result_row("Coins lost", "-%s" % UIKit.fmt_int(int(summary.get("lost_sc", 0))), UIKit.CRIMSON))
+			rv.add_child(_result_row("Kills", str(int(summary.get("kill_count", 0))), UIKit.TEXT))
+			if int(summary.get("lost_sc", 0)) > 0:
+				rv.add_child(_result_row("Coins lost", "-%s" % UIKit.fmt_int(int(summary.get("lost_sc", 0))), UIKit.CRIMSON))
 		var intel: Vector2i = summary.get("intel", Vector2i.ZERO)
 		if intel.y > 0:
 			rv.add_child(_result_row("Intel found", "%d / %d" % [intel.x, intel.y], UIKit.TEXT))
