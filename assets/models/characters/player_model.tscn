@@ -1,0 +1,256 @@
+[gd_scene load_steps=26 format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_fabric"]
+resource_name = "player_fabric"
+albedo_color = Color(0.2784, 0.2980, 0.3373, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_fabric2"]
+resource_name = "player_fabric2"
+albedo_color = Color(0.2275, 0.2431, 0.2784, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_armor"]
+resource_name = "player_armor"
+albedo_color = Color(0.1176, 0.1255, 0.1490, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_helmet"]
+resource_name = "player_helmet"
+albedo_color = Color(0.1490, 0.1608, 0.1843, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_scarf"]
+resource_name = "player_scarf"
+albedo_color = Color(0.7686, 0.0000, 0.0471, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_visor"]
+resource_name = "player_visor"
+albedo_color = Color(0.2471, 0.8784, 0.9412, 1)
+roughness = 0.85
+emission_enabled = true
+emission = Color(0.2471, 0.8784, 0.9412, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="StandardMaterial3D" id="mat_gun"]
+resource_name = "player_gun"
+albedo_color = Color(0.0824, 0.0863, 0.1020, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="box_0"]
+size = Vector3(0.34, 0.18, 0.22)
+
+[sub_resource type="BoxMesh" id="box_1"]
+size = Vector3(0.4, 0.4, 0.24)
+
+[sub_resource type="BoxMesh" id="box_2"]
+size = Vector3(0.44, 0.3, 0.3)
+
+[sub_resource type="BoxMesh" id="box_3"]
+size = Vector3(0.1, 0.12, 0.05)
+
+[sub_resource type="BoxMesh" id="box_4"]
+size = Vector3(0.34, 0.4, 0.18)
+
+[sub_resource type="BoxMesh" id="box_5"]
+size = Vector3(0.38, 0.08, 0.32)
+
+[sub_resource type="BoxMesh" id="box_6"]
+size = Vector3(0.07, 0.26, 0.04)
+
+[sub_resource type="SphereMesh" id="sphere_7"]
+radius = 1.0
+height = 2.0
+radial_segments = 12
+rings = 6
+
+[sub_resource type="BoxMesh" id="box_8"]
+size = Vector3(0.19, 0.13, 0.17)
+
+[sub_resource type="BoxMesh" id="box_9"]
+size = Vector3(0.21, 0.05, 0.04)
+
+[sub_resource type="BoxMesh" id="box_10"]
+size = Vector3(0.13, 0.08, 0.14)
+
+[sub_resource type="BoxMesh" id="box_11"]
+size = Vector3(0.12, 0.3, 0.13)
+
+[sub_resource type="BoxMesh" id="box_12"]
+size = Vector3(0.11, 0.28, 0.12)
+
+[sub_resource type="BoxMesh" id="box_13"]
+size = Vector3(0.1, 0.1, 0.11)
+
+[sub_resource type="BoxMesh" id="box_14"]
+size = Vector3(0.15, 0.42, 0.17)
+
+[sub_resource type="BoxMesh" id="box_15"]
+size = Vector3(0.13, 0.09, 0.06)
+
+[sub_resource type="BoxMesh" id="box_16"]
+size = Vector3(0.14, 0.36, 0.15)
+
+[sub_resource type="BoxMesh" id="box_17"]
+size = Vector3(0.16, 0.11, 0.27)
+
+[node name="OperativeModel" type="Node3D"]
+
+[node name="Torso" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0)
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.47, 0)
+
+[node name="ArmLeft" type="Node3D" parent="."]
+transform = Transform3D(0.99452, -0.10453, 0, 0.085625, 0.81466, 0.57358, -0.059955, -0.57043, 0.81915, -0.27, 1.36, 0)
+
+[node name="ArmRight" type="Node3D" parent="."]
+transform = Transform3D(0.98481, 0.17365, 0, -0.099601, 0.56486, 0.81915, 0.14224, -0.80671, 0.57358, 0.27, 1.36, 0)
+
+[node name="LegLeft" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.11, 0.86, 0)
+
+[node name="LegRight" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.11, 0.86, 0)
+
+[node name="TorsoPart1" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("box_0")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="TorsoPart2" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, 0)
+mesh = SubResource("box_1")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="TorsoPart3" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("box_2")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="TorsoPart4" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.22, -0.16)
+mesh = SubResource("box_3")
+surface_material_override/0 = SubResource("mat_fabric2")
+
+[node name="TorsoPart5" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, -0.16)
+mesh = SubResource("box_3")
+surface_material_override/0 = SubResource("mat_fabric2")
+
+[node name="TorsoPart6" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.22, -0.16)
+mesh = SubResource("box_3")
+surface_material_override/0 = SubResource("mat_fabric2")
+
+[node name="TorsoPart7" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0.23)
+mesh = SubResource("box_4")
+surface_material_override/0 = SubResource("mat_fabric2")
+
+[node name="TorsoPart8" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52, 0)
+mesh = SubResource("box_5")
+surface_material_override/0 = SubResource("mat_scarf")
+
+[node name="TorsoPart9" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(0.99027, -0.13917, 0, 0.13917, 0.99027, 0, 0, 0, 1, 0.09, 0.4, 0.18)
+mesh = SubResource("box_6")
+surface_material_override/0 = SubResource("mat_scarf")
+
+[node name="HeadPart1" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(0.15, 0, 0, 0, 0.138, 0, 0, 0, 0.162, 0, 0.11, 0)
+mesh = SubResource("sphere_7")
+surface_material_override/0 = SubResource("mat_helmet")
+
+[node name="HeadPart2" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.03)
+mesh = SubResource("box_8")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="HeadPart3" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, -0.115)
+mesh = SubResource("box_9")
+surface_material_override/0 = SubResource("mat_visor")
+
+[node name="ArmLeftPart1" type="MeshInstance3D" parent="ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 0)
+mesh = SubResource("box_10")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="ArmLeftPart2" type="MeshInstance3D" parent="ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.16, 0)
+mesh = SubResource("box_11")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="ArmLeftPart3" type="MeshInstance3D" parent="ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.43, 0)
+mesh = SubResource("box_12")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="ArmLeftPart4" type="MeshInstance3D" parent="ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.61, 0)
+mesh = SubResource("box_13")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="ArmRightPart1" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 0)
+mesh = SubResource("box_10")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="ArmRightPart2" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.16, 0)
+mesh = SubResource("box_11")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="ArmRightPart3" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.43, 0)
+mesh = SubResource("box_12")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="ArmRightPart4" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.61, 0)
+mesh = SubResource("box_13")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="LegLeftPart1" type="MeshInstance3D" parent="LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.21, 0)
+mesh = SubResource("box_14")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="LegLeftPart2" type="MeshInstance3D" parent="LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.44, -0.09)
+mesh = SubResource("box_15")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="LegLeftPart3" type="MeshInstance3D" parent="LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.62, 0)
+mesh = SubResource("box_16")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="LegLeftPart4" type="MeshInstance3D" parent="LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.805, -0.04)
+mesh = SubResource("box_17")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="LegRightPart1" type="MeshInstance3D" parent="LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.21, 0)
+mesh = SubResource("box_14")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="LegRightPart2" type="MeshInstance3D" parent="LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.44, -0.09)
+mesh = SubResource("box_15")
+surface_material_override/0 = SubResource("mat_armor")
+
+[node name="LegRightPart3" type="MeshInstance3D" parent="LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.62, 0)
+mesh = SubResource("box_16")
+surface_material_override/0 = SubResource("mat_fabric")
+
+[node name="LegRightPart4" type="MeshInstance3D" parent="LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.805, -0.04)
+mesh = SubResource("box_17")
+surface_material_override/0 = SubResource("mat_armor")

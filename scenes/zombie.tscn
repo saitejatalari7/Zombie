@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://df713zombie"]
 
 [ext_resource type="Script" path="res://scripts/zombie.gd" id="1_script"]
-[ext_resource type="PackedScene" path="res://assets/models/characters/zombie_shambler.glb" id="2_zombie_glb"]
+[ext_resource type="PackedScene" path="res://assets/models/characters/shambler_model.tscn" id="2_zombie_glb"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_zombie"]
 radius = 0.32

@@ -1,0 +1,198 @@
+[gd_scene load_steps=21 format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_hoodie"]
+resource_name = "runner_hoodie"
+albedo_color = Color(0.2314, 0.2431, 0.2706, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_hood"]
+resource_name = "runner_hood"
+albedo_color = Color(0.1725, 0.1804, 0.2000, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_pants"]
+resource_name = "runner_pants"
+albedo_color = Color(0.2941, 0.3059, 0.3333, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_skin"]
+resource_name = "runner_skin"
+albedo_color = Color(0.7412, 0.7216, 0.6941, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_eyes"]
+resource_name = "runner_eyes"
+albedo_color = Color(1.0000, 0.1176, 0.1765, 1)
+roughness = 0.85
+emission_enabled = true
+emission = Color(1.0000, 0.1176, 0.1765, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="StandardMaterial3D" id="mat_dark"]
+resource_name = "runner_dark"
+albedo_color = Color(0.1176, 0.1176, 0.1294, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="mat_wound"]
+resource_name = "runner_wound"
+albedo_color = Color(0.7216, 0.0000, 0.0392, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="box_0"]
+size = Vector3(0.26, 0.14, 0.18)
+
+[sub_resource type="BoxMesh" id="box_1"]
+size = Vector3(0.32, 0.38, 0.2)
+
+[sub_resource type="BoxMesh" id="box_2"]
+size = Vector3(0.26, 0.16, 0.14)
+
+[sub_resource type="BoxMesh" id="box_3"]
+size = Vector3(0.14, 0.1, 0.02)
+
+[sub_resource type="BoxMesh" id="box_4"]
+size = Vector3(0.2, 0.22, 0.21)
+
+[sub_resource type="BoxMesh" id="box_5"]
+size = Vector3(0.05, 0.03, 0.02)
+
+[sub_resource type="BoxMesh" id="box_6"]
+size = Vector3(0.14, 0.05, 0.04)
+
+[sub_resource type="BoxMesh" id="box_7"]
+size = Vector3(0.08, 0.32, 0.09)
+
+[sub_resource type="BoxMesh" id="box_8"]
+size = Vector3(0.07, 0.32, 0.08)
+
+[sub_resource type="BoxMesh" id="box_9"]
+size = Vector3(0.08, 0.1, 0.04)
+
+[sub_resource type="BoxMesh" id="box_10"]
+size = Vector3(0.12, 0.38, 0.14)
+
+[sub_resource type="BoxMesh" id="box_11"]
+size = Vector3(0.11, 0.34, 0.12)
+
+[sub_resource type="BoxMesh" id="box_12"]
+size = Vector3(0.11, 0.08, 0.2)
+
+[node name="RunnerModel" type="Node3D"]
+
+[node name="Torso" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.88295, 0.46947, 0, -0.46947, 0.88295, 0, 0.82, 0)
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.97815, -0.20791, 0, 0.20791, 0.97815, 0, 1.24, -0.27)
+
+[node name="ArmLeft" type="Node3D" parent="."]
+transform = Transform3D(0.98481, -0.17365, 0, 0.14726, 0.83516, -0.52992, 0.09202, 0.52187, 0.84805, -0.22, 1.16, -0.2)
+
+[node name="ArmRight" type="Node3D" parent="."]
+transform = Transform3D(0.99452, 0.10453, 0, -0.045822, 0.43597, 0.89879, 0.09395, -0.89387, 0.43837, 0.22, 1.16, -0.2)
+
+[node name="LegLeft" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.90631, 0.42262, 0, -0.42262, 0.90631, -0.1, 0.78, 0)
+
+[node name="LegRight" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.90631, -0.42262, 0, 0.42262, 0.90631, 0.1, 0.78, 0)
+
+[node name="TorsoPart1" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("box_0")
+surface_material_override/0 = SubResource("mat_pants")
+
+[node name="TorsoPart2" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.26, 0)
+mesh = SubResource("box_1")
+surface_material_override/0 = SubResource("mat_hoodie")
+
+[node name="TorsoPart3" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.44, 0.09)
+mesh = SubResource("box_2")
+surface_material_override/0 = SubResource("mat_hood")
+
+[node name="TorsoPart4" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06, 0.2, -0.105)
+mesh = SubResource("box_3")
+surface_material_override/0 = SubResource("mat_wound")
+
+[node name="HeadPart1" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+mesh = SubResource("box_4")
+surface_material_override/0 = SubResource("mat_skin")
+
+[node name="HeadPart2" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, 0.13, -0.106)
+mesh = SubResource("box_5")
+surface_material_override/0 = SubResource("mat_eyes")
+
+[node name="HeadPart3" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.13, -0.106)
+mesh = SubResource("box_5")
+surface_material_override/0 = SubResource("mat_eyes")
+
+[node name="HeadPart4" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.09)
+mesh = SubResource("box_6")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="ArmLeftPart1" type="MeshInstance3D" parent="ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.16, 0)
+mesh = SubResource("box_7")
+surface_material_override/0 = SubResource("mat_hoodie")
+
+[node name="ArmLeftPart2" type="MeshInstance3D" parent="ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.48, 0)
+mesh = SubResource("box_8")
+surface_material_override/0 = SubResource("mat_skin")
+
+[node name="ArmLeftPart3" type="MeshInstance3D" parent="ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.68, 0)
+mesh = SubResource("box_9")
+surface_material_override/0 = SubResource("mat_skin")
+
+[node name="ArmRightPart1" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.16, 0)
+mesh = SubResource("box_7")
+surface_material_override/0 = SubResource("mat_hoodie")
+
+[node name="ArmRightPart2" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.48, 0)
+mesh = SubResource("box_8")
+surface_material_override/0 = SubResource("mat_skin")
+
+[node name="ArmRightPart3" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.68, 0)
+mesh = SubResource("box_9")
+surface_material_override/0 = SubResource("mat_skin")
+
+[node name="LegLeftPart1" type="MeshInstance3D" parent="LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.19, 0)
+mesh = SubResource("box_10")
+surface_material_override/0 = SubResource("mat_pants")
+
+[node name="LegLeftPart2" type="MeshInstance3D" parent="LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.55, 0)
+mesh = SubResource("box_11")
+surface_material_override/0 = SubResource("mat_pants")
+
+[node name="LegLeftPart3" type="MeshInstance3D" parent="LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.75, -0.04)
+mesh = SubResource("box_12")
+surface_material_override/0 = SubResource("mat_skin")
+
+[node name="LegRightPart1" type="MeshInstance3D" parent="LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.19, 0)
+mesh = SubResource("box_10")
+surface_material_override/0 = SubResource("mat_pants")
+
+[node name="LegRightPart2" type="MeshInstance3D" parent="LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.55, 0)
+mesh = SubResource("box_11")
+surface_material_override/0 = SubResource("mat_pants")
+
+[node name="LegRightPart3" type="MeshInstance3D" parent="LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.75, -0.04)
+mesh = SubResource("box_12")
+surface_material_override/0 = SubResource("mat_skin")

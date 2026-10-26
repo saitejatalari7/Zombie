@@ -118,12 +118,20 @@ var target_cache_timer: float = 0.0
 
 # Procedural run bobbing
 var run_cycle: float = 0.0
+# Leg rest positions from the model, so the stride animates around them (not a fixed height)
+var leg_rest_left: Vector3 = Vector3.ZERO
+var leg_rest_right: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	# Automatic Stair Climbing & Smooth slope gliding configuration
 	floor_snap_length = 0.45
 	floor_max_angle = deg_to_rad(45.0)
 	floor_stop_on_slope = true
+	
+	if leg_left:
+		leg_rest_left = leg_left.position
+	if leg_right:
+		leg_rest_right = leg_right.position
 	
 	# Field Medbay outpost upgrade: bonus starting health
 	var gm = get_node_or_null("/root/GameManager")
@@ -375,10 +383,10 @@ func _physics_process(delta: float) -> void:
 			var stride := sin(run_cycle)
 			leg_left.rotation.x = stride * 0.65
 			leg_right.rotation.x = -stride * 0.65
-			leg_left.position.z = -stride * 0.12
-			leg_right.position.z = stride * 0.12
-			leg_left.position.y = 0.35 + maxf(0.0, stride * 0.06)
-			leg_right.position.y = 0.35 + maxf(0.0, -stride * 0.06)
+			leg_left.position.z = leg_rest_left.z - stride * 0.12
+			leg_right.position.z = leg_rest_right.z + stride * 0.12
+			leg_left.position.y = leg_rest_left.y + maxf(0.0, stride * 0.06)
+			leg_right.position.y = leg_rest_right.y + maxf(0.0, -stride * 0.06)
 		
 		# Step & footprint check
 		distance_since_step += velocity.length() * delta
@@ -397,10 +405,10 @@ func _physics_process(delta: float) -> void:
 		if leg_left and leg_right:
 			leg_left.rotation.x = move_toward(leg_left.rotation.x, 0.0, delta * 14.0)
 			leg_right.rotation.x = move_toward(leg_right.rotation.x, 0.0, delta * 14.0)
-			leg_left.position.z = move_toward(leg_left.position.z, 0.0, delta * 3.0)
-			leg_right.position.z = move_toward(leg_right.position.z, 0.0, delta * 3.0)
-			leg_left.position.y = move_toward(leg_left.position.y, 0.35, delta * 3.0)
-			leg_right.position.y = move_toward(leg_right.position.y, 0.35, delta * 3.0)
+			leg_left.position.z = move_toward(leg_left.position.z, leg_rest_left.z, delta * 3.0)
+			leg_right.position.z = move_toward(leg_right.position.z, leg_rest_right.z, delta * 3.0)
+			leg_left.position.y = move_toward(leg_left.position.y, leg_rest_left.y, delta * 3.0)
+			leg_right.position.y = move_toward(leg_right.position.y, leg_rest_right.y, delta * 3.0)
 	
 	# Coyote time tracking
 	if is_on_floor():
