@@ -138,6 +138,15 @@ func spawn_single_zombie() -> void:
 	alive_zombies += 1
 	emit_signal("zombie_count_changed", alive_zombies, total_kills)
 
+## Spawns one shambler at a world position (used by nests and scripted events).
+func spawn_zombie_at(pos: Vector3) -> void:
+	var z: Zombie = zombie_scene.instantiate()
+	get_parent().add_child(z)
+	z.global_position = pos
+	z.died.connect(_on_zombie_died)
+	alive_zombies += 1
+	emit_signal("zombie_count_changed", alive_zombies, total_kills)
+
 func _on_zombie_died(_zombie: Zombie) -> void:
 	alive_zombies = max(0, alive_zombies - 1)
 	total_kills += 1

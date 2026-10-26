@@ -834,7 +834,11 @@ func get_best_target_with_los(max_dist: float) -> Node3D:
 			if d_sq <= min_d_sq:
 				var target_pos: Vector3 = c_pos + Vector3(0, 0.9, 0)
 				var query := PhysicsRayQueryParameters3D.create(eye_pos, target_pos, 1)
-				query.exclude = [self.get_rid()]
+				# Exclude the candidate too: targets that are world solids (e.g. nests) would block their own ray
+				var excl: Array[RID] = [self.get_rid()]
+				if candidate is CollisionObject3D:
+					excl.append((candidate as CollisionObject3D).get_rid())
+				query.exclude = excl
 				var hit := space_state.intersect_ray(query)
 				if hit.is_empty():
 					min_d_sq = d_sq

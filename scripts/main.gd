@@ -130,12 +130,45 @@ func _start_mission(_sector_id: int) -> void:
 	job = MissionJob.create(contract.get("job", "kill_quota"))
 	job.name = "MissionJob"
 	job.setup(contract, active_sector_node, player)
+	job.spawner = spawner
 	add_child(job)
 	job.status_changed.connect(_on_job_status_changed)
 	job.objective_met.connect(_on_objective_met)
+	job.radio_message.connect(func(text: String): hud.show_radio("OVERWATCH", text))
+	job.progress_changed.connect(_on_job_progress)
 	gm.in_run_kills_changed.connect(job.on_run_kills_changed)
 	player.died.connect(_on_player_died)
+	hud.show_radio("OVERWATCH", String(contract.get("briefing", "")))
 	job.start()
+	_spawn_intel(gm)
+
+func _on_job_progress(fraction: float, active: bool) -> void:
+	if fraction <= 0.0 and not active:
+		hud.hide_evac_progress()
+	else:
+		hud.show_evac_progress(fraction, active)
+
+## Optional intel documents: only the ones this save hasn't found yet.
+func _spawn_intel(gm) -> void:
+	for m in active_sector_node.get_marker_nodes("IntelSpots"):
+		if gm.is_intel_found(String(m.name)):
+			continue
+		var pickup := IntelPickup.new()
+		pickup.intel_id = String(m.name)
+		active_sector_node.add_child(pickup)
+		pickup.global_position = m.global_position
+		pickup.collected.connect(_on_intel_collected)
+
+func _on_intel_collected(intel_id: String) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm:
+		return
+	var entry: Dictionary = gm.collect_intel(intel_id)
+	if entry.is_empty():
+		return
+	var progress: Vector2i = gm.get_intel_progress(gm.current_sector)
+	hud.show_radio("INTEL %d/%d · %s" % [progress.x, progress.y, entry["title"]], String(entry["text"]))
+	hud.show_powerup_banner("INTEL FOUND  +%d RC" % GameManager.INTEL_RC_REWARD)
 
 func _configure_extraction_zone(area: Area3D) -> void:
 	# Player lives on physics layer 2; sector scenes only listened on layer 1.
@@ -168,6 +201,8 @@ func _on_objective_met() -> void:
 	if objective_complete or mission_over:
 		return
 	objective_complete = true
+	if job:
+		hud.show_radio("OVERWATCH", String(job.contract.get("extract_radio", "")))
 	hud.set_mission_status("EVAC UNLOCKED — REACH THE LZ ▲", Color(1.0, 0.8, 0.1))
 	hud.show_banner("⚡ OBJECTIVE COMPLETE — EVAC UNLOCKED", "Follow the red beacon to the extraction LZ ➔")
 	if is_instance_valid(extraction_marker):

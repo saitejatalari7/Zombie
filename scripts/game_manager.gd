@@ -30,23 +30,33 @@ const SAVE_VERSION := 2
 const CONTRACTS: Dictionary = {
 	1: [
 		{
-			"id": "s1_sweep",
-			"job": "kill_quota",
-			"title": "SECTOR 01: QUARANTINE SWEEP",
-			"desc": "Residential block overrun. Thin the infected inside the cordon, then call evac from the upper terrace.",
-			"type": "TYPE: SWEEP & CLEAR",
-			"threat": "THREAT: LOW [SHAMBLERS]",
+			"id": "s1_beacon",
+			"job": "steps",
+			"title": "SECTOR 01: LIGHT THE BEACON",
+			"desc": "The Quarantine Block went dark when the medevac fell. No beacon, no evac birds. Clear the avenue, burn out the nest in the West Plaza, and pull the beacon fuse from the terrace depot.",
+			"type": "TYPE: SECURE & SIGNAL",
+			"threat": "THREAT: LOW [NEST ACTIVE]",
 			"payout_sc": 350,
 			"payout_rc": 1,
 			"xp": 120,
-			"kills_required": 25,
+			"kills_required": 0,
 			"is_night": false,
+			"briefing": "WARDEN, this is Overwatch. The block's evac beacon is dead and nothing can land. Get it lit.",
+			"steps": [
+				{"type": "kill", "count": 12, "title": "CLEAR THE AVENUE",
+					"radio": "The avenue is crawling. Thin them out before you push north."},
+				{"type": "destroy", "marker": "NestWestPlaza", "title": "BURN OUT THE NEST",
+					"radio": "Thermal shows a nest in the West Plaza. It keeps birthing them. Put it down."},
+				{"type": "search", "marker": "DepotFuse", "seconds": 4.0, "title": "PULL THE BEACON FUSE",
+					"radio": "Beacon fuse is inside the depot on the terrace. Get in there and pull it."},
+			],
+			"extract_radio": "Fuse is in, the beacon is live. Hold the terrace, evac is inbound.",
 		},
 		{
-			"id": "s1_recovery",
-			"job": "asset_recovery",
-			"title": "SECTOR 01: FLIGHT RECORDER RECOVERY",
-			"desc": "Retrieve the encrypted flight recorder from the quarantine zone and extract before runner swarms corner you. Carrying it slows you down and draws the runners.",
+			"id": "s1_recorder",
+			"job": "steps",
+			"title": "SECTOR 01: THE FLIGHT RECORDER",
+			"desc": "The medevac carrying the first Crimson samples crashed in this block. Its flight recorder knows where the samples came from. Find the pilot's keycard, open the wreck container, and carry the recorder out.",
 			"type": "TYPE: ASSET RECOVERY",
 			"threat": "THREAT: LOW [RUNNERS HUNT CARRIER]",
 			"payout_sc": 420,
@@ -54,6 +64,14 @@ const CONTRACTS: Dictionary = {
 			"xp": 150,
 			"kills_required": 0,
 			"is_night": false,
+			"briefing": "WARDEN, Overwatch. The medevac pilot didn't make it, but his recorder might tell us what he was carrying.",
+			"steps": [
+				{"type": "search", "marker": "ClinicKeycard", "seconds": 3.0, "title": "FIND THE PILOT'S KEYCARD",
+					"radio": "The pilot crawled into the clinic on the avenue. Search it for his keycard."},
+				{"type": "carry", "marker": "RecorderCase", "title": "TAKE THE FLIGHT RECORDER",
+					"radio": "Keycard opens the wreck container in the east alley. The recorder is inside."},
+			],
+			"extract_radio": "Recorder secured. It's heavy and the runners can smell it. Get to the terrace.",
 		},
 	],
 	2: [
@@ -102,6 +120,17 @@ const CONTRACTS: Dictionary = {
 		},
 	],
 }
+
+## Intel documents hidden in sectors (marker name -> lore). Found once, kept forever.
+const INTEL: Dictionary = {
+	"IntelClinic": {"sector": 1, "title": "CLINIC INTAKE LOG",
+		"text": "Day 3. Patients with crimson eyes and no pulse. They still walk. The army took our samples to a medevac."},
+	"IntelParking": {"sector": 1, "title": "SOLDIER'S NOTE",
+		"text": "They said the strain was contained at the lab. So why are we guarding a car park full of bodies?"},
+	"IntelTerrace": {"sector": 1, "title": "PILOT'S LAST CALL",
+		"text": "Mayday, Crimson One going down. Cargo has breached. Repeat: the samples are awake."},
+}
+const INTEL_RC_REWARD := 1
 
 ## Paired operative skills (Design Doc Section 5)
 const SKILLS_DATA: Dictionary = {
@@ -220,6 +249,8 @@ var has_completed_tutorial: bool = false
 var highest_sector_unlocked: int = 1
 ## Sectors with at least one successful extraction: { "1": true }
 var sectors_cleared: Dictionary = {}
+## Intel documents found: { "IntelClinic": true }
+var intel_found: Dictionary = {}
 
 ## Skills
 var unlocked_skills: Dictionary = {}
@@ -365,6 +396,32 @@ func start_mission_run() -> void:
 	in_run_kills_changed.emit(0)
 
 
+func is_intel_found(intel_id: String) -> bool:
+	return intel_found.get(intel_id, false)
+
+
+## Marks an intel document as read (saved immediately) and adds its research core
+## to the run's unbanked loot. Returns the lore entry, or {} if unknown/already found.
+func collect_intel(intel_id: String) -> Dictionary:
+	if not INTEL.has(intel_id) or is_intel_found(intel_id):
+		return {}
+	intel_found[intel_id] = true
+	add_in_run_research_core(INTEL_RC_REWARD)
+	save_game()
+	return INTEL[intel_id]
+
+
+func get_intel_progress(sector_id: int) -> Vector2i:
+	var found := 0
+	var total := 0
+	for intel_id in INTEL:
+		if int(INTEL[intel_id]["sector"]) == sector_id:
+			total += 1
+			if is_intel_found(intel_id):
+				found += 1
+	return Vector2i(found, total)
+
+
 func get_run_kill_count() -> int:
 	var total := 0
 	for k in in_run_kills:
@@ -491,6 +548,7 @@ func _base_summary(success: bool) -> Dictionary:
 		"title": get_active_contract()["title"],
 		"kills": in_run_kills.duplicate(),
 		"kill_count": get_run_kill_count(),
+		"intel": get_intel_progress(current_sector),
 	}
 
 
@@ -663,6 +721,7 @@ func save_game() -> void:
 	config.set_value("progression", "has_completed_tutorial", has_completed_tutorial)
 	config.set_value("progression", "highest_sector_unlocked", highest_sector_unlocked)
 	config.set_value("progression", "sectors_cleared", sectors_cleared)
+	config.set_value("progression", "intel_found", intel_found)
 
 	# Skills
 	config.set_value("skills", "unlocked_skills", unlocked_skills)
@@ -730,6 +789,13 @@ func load_game() -> void:
 		for k in cleared:
 			if cleared[k] == true:
 				sectors_cleared[str(k)] = true
+
+	intel_found = {}
+	var intel = config.get_value("progression", "intel_found", {})
+	if intel is Dictionary:
+		for k in intel:
+			if intel[k] == true and INTEL.has(str(k)):
+				intel_found[str(k)] = true
 
 	# Skills
 	unlocked_skills = {}
@@ -848,6 +914,7 @@ func reset_save() -> void:
 	has_completed_tutorial = false
 	highest_sector_unlocked = 1
 	sectors_cleared.clear()
+	intel_found.clear()
 	unlocked_skills.clear()
 	equipped_skills = ["", ""]
 	weapon_upgrades.clear()

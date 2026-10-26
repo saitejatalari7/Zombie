@@ -8,10 +8,15 @@ class_name MissionJob
 
 signal objective_met()
 signal status_changed(text: String, color: Color)
+## A line from Overwatch for the HUD radio panel
+signal radio_message(text: String)
+## Progress of a timed action (e.g. searching); fraction <= 0 and not active hides the bar
+signal progress_changed(fraction: float, active: bool)
 
 var contract: Dictionary = {}
 var sector: SectorBase = null
 var player: Player = null
+var spawner: ZombieSpawner = null
 var met: bool = false
 
 
@@ -19,6 +24,7 @@ var met: bool = false
 const JOB_SCRIPTS: Dictionary = {
 	"kill_quota": "res://scripts/jobs/kill_quota_job.gd",
 	"asset_recovery": "res://scripts/jobs/asset_recovery_job.gd",
+	"steps": "res://scripts/jobs/step_job.gd",
 }
 
 

@@ -282,6 +282,14 @@ func select_sector(sector_id: int, contract_index: int = 0) -> void:
 		contract_title.text = c["title"]
 		var objective: String
 		match c.get("job", "kill_quota"):
+			"steps":
+				var lines := PackedStringArray()
+				var n := 1
+				for st in c.get("steps", []):
+					lines.append("%d. %s" % [n, String(st.get("title", "")).capitalize()])
+					n += 1
+				lines.append("%d. Extract from the terrace LZ" % n)
+				objective = "\n" + "\n".join(lines)
 			"asset_recovery":
 				objective = "Recover the flight recorder, then reach the extraction LZ."
 			_:

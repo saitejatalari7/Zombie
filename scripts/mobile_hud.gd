@@ -417,6 +417,74 @@ func _on_vault_state_changed(can_vault: bool) -> void:
 			climb_button.modulate = Color(1, 1, 1, 0.45)
 
 var evac_bar: ProgressBar = null
+
+# ─── Radio panel: queued lines from Overwatch (and intel reads) ───
+const RADIO_LINE_TIME := 4.5
+var _radio_panel: PanelContainer = null
+var _radio_speaker: Label = null
+var _radio_text: Label = null
+var _radio_queue: Array = []
+var _radio_busy: bool = false
+
+func show_radio(speaker: String, text: String) -> void:
+	if text.strip_edges() == "":
+		return
+	_radio_queue.append([speaker, text])
+	if not _radio_busy:
+		_next_radio_line()
+
+func _next_radio_line() -> void:
+	if _radio_queue.is_empty():
+		_radio_busy = false
+		if _radio_panel:
+			var t := create_tween()
+			t.tween_property(_radio_panel, "modulate:a", 0.0, 0.3)
+			t.tween_callback(_hide_radio_if_idle)
+		return
+	_radio_busy = true
+	_ensure_radio_panel()
+	var line: Array = _radio_queue.pop_front()
+	_radio_speaker.text = "📻 " + String(line[0])
+	_radio_text.text = String(line[1])
+	_radio_panel.visible = true
+	_radio_panel.modulate.a = 1.0
+	get_tree().create_timer(RADIO_LINE_TIME, true).timeout.connect(_next_radio_line)
+
+func _hide_radio_if_idle() -> void:
+	if _radio_queue.is_empty() and _radio_panel:
+		_radio_panel.visible = false
+
+func _ensure_radio_panel() -> void:
+	if _radio_panel:
+		return
+	_radio_panel = PanelContainer.new()
+	_radio_panel.name = "RadioPanel"
+	_radio_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_radio_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_radio_panel.offset_left = -400.0
+	_radio_panel.offset_right = 400.0
+	_radio_panel.offset_top = 228.0
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.067, 0.067, 0.075, 0.88)
+	bg.border_color = Color(1.0, 0.72, 0.0, 0.9)
+	bg.border_width_left = 6
+	bg.set_content_margin_all(16)
+	_radio_panel.add_theme_stylebox_override("panel", bg)
+	var vbox := VBoxContainer.new()
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_radio_panel.add_child(vbox)
+	_radio_speaker = Label.new()
+	_radio_speaker.add_theme_font_size_override("font_size", 24)
+	_radio_speaker.add_theme_color_override("font_color", Color(1.0, 0.72, 0.0))
+	vbox.add_child(_radio_speaker)
+	_radio_text = Label.new()
+	_radio_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_radio_text.custom_minimum_size = Vector2(740.0, 0.0)
+	_radio_text.add_theme_font_size_override("font_size", 28)
+	_radio_text.add_theme_color_override("font_color", Color(0.95, 0.95, 0.97))
+	vbox.add_child(_radio_text)
+	add_child(_radio_panel)
+	move_child(_radio_panel, 0)
 var objective_pointer: ObjectivePointer = null
 
 ## Points at the current goal (objective, then LZ). Pass null to hide.
@@ -529,6 +597,9 @@ func show_mission_result(summary: Dictionary) -> void:
 			_add_result_label(vbox, "UNBANKED LOOT LOST: %d SC" % summary.get("lost_sc", 0), 30, Color(1.0, 0.45, 0.45))
 			_add_result_label(vbox, "SALVAGED (30%%): +%d SC" % summary.get("total_sc", 0), 38, Color(1.0, 0.72, 0.0))
 		
+		var intel: Vector2i = summary.get("intel", Vector2i.ZERO)
+		if intel.y > 0:
+			_add_result_label(vbox, "INTEL FOUND IN THIS SECTOR: %d / %d" % [intel.x, intel.y], 26, Color(0.75, 0.75, 0.8))
 		_add_result_label(vbox, "+%d XP   ·   CLR-LV.%02d  (%d / %d XP)" % [
 			summary.get("total_xp", 0), summary.get("level_after", 1), summary.get("xp_now", 0), summary.get("xp_needed", 0)
 		], 30, Color.WHITE)

@@ -6,7 +6,7 @@ class_name ObjectivePointer
 ## above the goal. Main calls point_at() every frame (or clear()).
 
 const EDGE_MARGIN := 70.0
-const TOP_MARGIN := 250.0     # keep clear of the mission pill / evac bar
+const TOP_MARGIN := 380.0     # keep clear of the mission pill, evac bar and radio panel
 const BOTTOM_MARGIN := 140.0
 const ON_SCREEN_LIFT := 60.0  # px above the goal when it's visible
 
