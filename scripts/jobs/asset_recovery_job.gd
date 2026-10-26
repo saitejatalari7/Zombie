@@ -48,5 +48,11 @@ func _on_case_secured(_p: Player) -> void:
 	_complete()
 
 
+func get_target_position() -> Variant:
+	if met or not is_instance_valid(case_node):
+		return null
+	return case_node.global_position
+
+
 func get_locked_hint() -> String:
 	return "Recover the flight recorder before evac"

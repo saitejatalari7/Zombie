@@ -417,6 +417,19 @@ func _on_vault_state_changed(can_vault: bool) -> void:
 			climb_button.modulate = Color(1, 1, 1, 0.45)
 
 var evac_bar: ProgressBar = null
+var objective_pointer: ObjectivePointer = null
+
+## Points at the current goal (objective, then LZ). Pass null to hide.
+func update_objective_pointer(target: Variant, from: Vector3, color: Color) -> void:
+	if not objective_pointer:
+		objective_pointer = ObjectivePointer.new()
+		objective_pointer.name = "ObjectivePointer"
+		add_child(objective_pointer)
+		move_child(objective_pointer, 0)  # under modals and the debrief
+	if target == null:
+		objective_pointer.clear()
+	else:
+		objective_pointer.point_at(target, from, color)
 var _evac_fill_holding: StyleBoxFlat = null
 var _evac_fill_paused: StyleBoxFlat = null
 

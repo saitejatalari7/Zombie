@@ -200,6 +200,7 @@ func _start_evac() -> void:
 	hud.show_banner("⚠ EVAC INBOUND — HOLD THE LZ", "Stay inside the beacon until the chopper lands")
 
 func _process(delta: float) -> void:
+	_update_objective_pointer()
 	if not evac_active or mission_over or player.is_dead:
 		return
 	if player_in_lz:
@@ -210,6 +211,21 @@ func _process(delta: float) -> void:
 	hud.show_evac_progress(1.0 - evac_time_left / evac_hold_time, player_in_lz)
 	if evac_time_left <= 0.0:
 		_extract()
+
+## Arrow to the current goal: the job's objective first, then the LZ (hidden once you're in it).
+func _update_objective_pointer() -> void:
+	if mission_over or player.is_dead:
+		hud.update_objective_pointer(null, Vector3.ZERO, Color.WHITE)
+		return
+	var target: Variant = null
+	var color := Color(1.0, 0.72, 0.0)
+	if objective_complete:
+		if extraction_area and not player_in_lz:
+			target = extraction_area.global_position
+			color = Color(1.0, 0.15, 0.2)
+	elif job:
+		target = job.get_target_position()
+	hud.update_objective_pointer(target, player.global_position, color)
 
 func _extract() -> void:
 	mission_over = true

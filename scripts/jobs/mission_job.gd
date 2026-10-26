@@ -42,6 +42,11 @@ func on_run_kills_changed(_run_kills: int) -> void:
 	pass
 
 
+## Where the objective arrow should point before the LZ unlocks, or null for no arrow.
+func get_target_position() -> Variant:
+	return null
+
+
 ## Second line of the "LZ LOCKED" banner.
 func get_locked_hint() -> String:
 	return "Complete the objective before evac"
