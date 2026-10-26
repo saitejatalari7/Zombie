@@ -116,6 +116,9 @@ const SECTOR_UNLOCK_LEVELS: Array[int] = [0, 1, 11, 26, 41]
 
 const COMMS_PAYOUT_BONUS_PER_TIER := 0.15  # +15% contract SC per Comms Array tier
 const MEDBAY_HEALTH_PER_TIER := 20.0       # +20 starting armor/HP per Medbay tier
+const EVAC_HOLD_BASE := 20.0               # Seconds to hold the LZ before evac arrives
+const HELIPAD_EVAC_REDUCTION_PER_TIER := 3.0 # Tactical Helipad: -3 s per tier
+const EVAC_HOLD_MIN := 8.0
 const FIRST_CLEAR_MULTIPLIER := 2          # First successful extraction per sector pays double
 const FAILURE_LOOT_KEPT := 0.3             # KIA keeps 30% of unbanked SC
 const FAILURE_XP_KEPT := 0.5               # KIA keeps 50% of combat XP
@@ -283,6 +286,11 @@ func get_contract_payout_sc(contract: Dictionary) -> int:
 
 func is_sector_cleared(sector_id: int) -> bool:
 	return sectors_cleared.get(str(sector_id), false)
+
+
+func get_evac_hold_time() -> float:
+	var t := EVAC_HOLD_BASE - HELIPAD_EVAC_REDUCTION_PER_TIER * float(get_outpost_level("helipad"))
+	return maxf(EVAC_HOLD_MIN, t)
 
 
 func get_medbay_health_bonus() -> float:

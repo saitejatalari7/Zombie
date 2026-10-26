@@ -26,6 +26,8 @@ var wave_cooldown_timer: float = 0.0
 
 var player: Player = null
 var is_frenzy: bool = false
+## Set by Main while the player holds the LZ: frenzy pacing until evac arrives
+var evac_frenzy: bool = false
 
 func _ready() -> void:
 	refresh_spawn_points()
@@ -79,17 +81,19 @@ func _on_powerup_timer_changed(time_left: float, _max_time: float) -> void:
 
 func _process(delta: float) -> void:
 	# Wave intermission pause
-	if wave_cooldown_timer > 0.0:
+	# No breathing room between waves while the player is holding the LZ
+	if wave_cooldown_timer > 0.0 and not evac_frenzy:
 		wave_cooldown_timer -= delta
 		return
 		
 	timer += delta
-	var active_interval := (0.7 if is_frenzy else spawn_interval)
+	var frenzy := is_frenzy or evac_frenzy
+	var active_interval := (0.7 if frenzy else spawn_interval)
 	if timer >= active_interval:
 		timer = 0.0
-		var limit := (26 if is_frenzy else max_active_zombies)
+		var limit := (26 if frenzy else max_active_zombies)
 		if alive_zombies < limit:
-			var batch := (2 if is_frenzy else 1)
+			var batch := (2 if frenzy else 1)
 			for i in range(batch):
 				if alive_zombies < limit:
 					spawn_single_zombie()

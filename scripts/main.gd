@@ -29,6 +29,12 @@ var mission_over: bool = false
 var extraction_area: Area3D = null
 var extraction_marker: Node3D = null
 
+# ─── Evac Hold: once the LZ is open, stand in it until the countdown ends ───
+var evac_active: bool = false
+var evac_hold_time: float = 20.0
+var evac_time_left: float = 0.0
+var player_in_lz: bool = false
+
 func _ready() -> void:
 	# Selected golden/dramatic raking sunlight configuration (User Pick)
 	sun.rotation_degrees = Vector3(-45.0, 106.0, 0.0)
@@ -109,6 +115,7 @@ func _load_tactical_sector(sector_id: int) -> void:
 			extraction_area = active_sector_node.extraction_zone
 			_configure_extraction_zone(extraction_area)
 			extraction_area.body_entered.connect(_on_extraction_zone_entered)
+			extraction_area.body_exited.connect(_on_extraction_zone_exited)
 			
 		print("[Main] Sector %d loaded successfully: %s" % [sector_id, active_sector_node.sector_name])
 
@@ -167,16 +174,48 @@ func _on_objective_met() -> void:
 		extraction_marker.visible = true
 	# Already standing in the LZ when the objective completes
 	if extraction_area and extraction_area.overlaps_body(player):
-		_on_extraction_zone_entered(player)
+		player_in_lz = true
+		_start_evac()
 
 func _on_extraction_zone_entered(body: Node3D) -> void:
 	if body != player or mission_over or player.is_dead:
 		return
+	player_in_lz = true
 	if not objective_complete:
 		hud.show_banner("LZ LOCKED", job.get_locked_hint() if job else "")
 		return
-	
+	if not evac_active:
+		_start_evac()
+
+func _on_extraction_zone_exited(body: Node3D) -> void:
+	if body == player:
+		player_in_lz = false
+
+func _start_evac() -> void:
+	evac_active = true
+	var gm = get_node_or_null("/root/GameManager")
+	evac_hold_time = gm.get_evac_hold_time() if gm else 20.0
+	evac_time_left = evac_hold_time
+	spawner.evac_frenzy = true
+	hud.show_banner("⚠ EVAC INBOUND — HOLD THE LZ", "Stay inside the beacon until the chopper lands")
+
+func _process(delta: float) -> void:
+	if not evac_active or mission_over or player.is_dead:
+		return
+	if player_in_lz:
+		evac_time_left = maxf(0.0, evac_time_left - delta)
+		hud.set_mission_status("HOLD THE LZ — EVAC IN %.1fs" % evac_time_left, Color(1.0, 0.8, 0.1))
+	else:
+		hud.set_mission_status("RETURN TO THE LZ — EVAC PAUSED", Color(1.0, 0.3, 0.3))
+	hud.show_evac_progress(1.0 - evac_time_left / evac_hold_time, player_in_lz)
+	if evac_time_left <= 0.0:
+		_extract()
+
+func _extract() -> void:
 	mission_over = true
+	evac_active = false
+	spawner.evac_frenzy = false
+	hud.hide_evac_progress()
 	print("[Main] Player extracted!")
 	var gm = get_node_or_null("/root/GameManager")
 	var summary: Dictionary = gm.complete_mission() if gm else {}
@@ -186,6 +225,9 @@ func _on_player_died() -> void:
 	if mission_over:
 		return
 	mission_over = true
+	evac_active = false
+	spawner.evac_frenzy = false
+	hud.hide_evac_progress()
 	hud.set_mission_status("OPERATIVE DOWN", Color(1.0, 0.2, 0.2))
 	# Short beat so the death registers before the debrief.
 	# (connect, not await: the connection drops cleanly if the scene is left first)

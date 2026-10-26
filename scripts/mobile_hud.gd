@@ -416,6 +416,39 @@ func _on_vault_state_changed(can_vault: bool) -> void:
 		else:
 			climb_button.modulate = Color(1, 1, 1, 0.45)
 
+var evac_bar: ProgressBar = null
+var _evac_fill_holding: StyleBoxFlat = null
+var _evac_fill_paused: StyleBoxFlat = null
+
+## Evac countdown bar under the mission pill. Red while paused (player outside the LZ).
+func show_evac_progress(fraction: float, holding: bool) -> void:
+	if not evac_bar:
+		evac_bar = ProgressBar.new()
+		evac_bar.name = "EvacBar"
+		evac_bar.show_percentage = false
+		evac_bar.max_value = 1.0
+		evac_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		evac_bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		evac_bar.offset_left = -260.0
+		evac_bar.offset_right = 260.0
+		evac_bar.offset_top = 190.0
+		evac_bar.offset_bottom = 214.0
+		var bg := StyleBoxFlat.new()
+		bg.bg_color = Color(0.07, 0.07, 0.08, 0.85)
+		evac_bar.add_theme_stylebox_override("background", bg)
+		add_child(evac_bar)
+		_evac_fill_holding = StyleBoxFlat.new()
+		_evac_fill_holding.bg_color = Color(1.0, 0.72, 0.0)
+		_evac_fill_paused = StyleBoxFlat.new()
+		_evac_fill_paused.bg_color = Color(1.0, 0.2, 0.25)
+	evac_bar.add_theme_stylebox_override("fill", _evac_fill_holding if holding else _evac_fill_paused)
+	evac_bar.value = clampf(fraction, 0.0, 1.0)
+	evac_bar.visible = true
+
+func hide_evac_progress() -> void:
+	if evac_bar:
+		evac_bar.visible = false
+
 func show_banner(title: String, sub: String = "") -> void:
 	if not street_cleared_banner:
 		return
