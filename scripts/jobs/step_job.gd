@@ -131,11 +131,11 @@ func _update_status() -> void:
 			if _search_time > 0.0 and _flat_dist(player.global_position, _marker_pos) <= SEARCH_RADIUS:
 				detail = "  SEARCHING..."
 			else:
-				detail = "  ◆ %dm" % int(_flat_dist(player.global_position, _marker_pos))
+				detail = "  ·  %dm" % int(_flat_dist(player.global_position, _marker_pos))
 		_:
 			var target: Variant = get_target_position()
 			if target != null:
-				detail = "  ◆ %dm" % int(_flat_dist(player.global_position, target))
+				detail = "  ·  %dm" % int(_flat_dist(player.global_position, target))
 	status_changed.emit("%d/%d  %s%s" % [index + 1, steps.size() + 1, title, detail], STEP_COLOR)
 
 

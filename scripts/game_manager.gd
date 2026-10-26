@@ -282,6 +282,11 @@ var saved_sfx_volume: float = 1.0
 var saved_music_volume: float = 0.7
 var saved_haptics_enabled: bool = true
 var saved_is_portrait: bool = true
+var saved_screen_shake: bool = true
+var saved_blood_full: bool = true   # FULL vs LOW blood decals (performance)
+
+## Hub tab to open next time the hub loads (e.g. "armory" from the debrief's Upgrade button)
+var pending_hub_tab: String = ""
 
 ## Lifetime Statistics
 var total_kills: int = 0
@@ -783,6 +788,8 @@ func save_game() -> void:
 	config.set_value("settings", "music_volume", saved_music_volume)
 	config.set_value("settings", "haptics_enabled", saved_haptics_enabled)
 	config.set_value("settings", "is_portrait", saved_is_portrait)
+	config.set_value("settings", "screen_shake", saved_screen_shake)
+	config.set_value("settings", "blood_full", saved_blood_full)
 
 	# Stats
 	config.set_value("stats", "total_kills", total_kills)
@@ -877,6 +884,8 @@ func load_game() -> void:
 	saved_music_volume = _read_float(config, "settings", "music_volume", 0.7)
 	saved_haptics_enabled = _read_bool(config, "settings", "haptics_enabled", true)
 	saved_is_portrait = _read_bool(config, "settings", "is_portrait", true)
+	saved_screen_shake = _read_bool(config, "settings", "screen_shake", true)
+	saved_blood_full = _read_bool(config, "settings", "blood_full", true)
 
 	# Stats
 	total_kills = _read_int(config, "stats", "total_kills", 0, 0, 999999999)
@@ -885,6 +894,44 @@ func load_game() -> void:
 
 	_refund_unreleased_purchases()
 	game_loaded.emit()
+
+
+const BLOOD_DECALS_FULL := 120
+const BLOOD_DECALS_LOW := 40
+
+
+func get_blood_decal_limit() -> int:
+	return BLOOD_DECALS_FULL if saved_blood_full else BLOOD_DECALS_LOW
+
+
+## For the hub's "something is ready" dots.
+func can_afford_armory_upgrade() -> bool:
+	var goal := get_next_armory_goal()
+	return not goal.is_empty() and survival_coins >= int(goal["cost"])
+
+
+func can_afford_skill() -> bool:
+	for skill_id in IMPLEMENTED_SKILLS:
+		var data: Dictionary = SKILLS_DATA.get(skill_id, {})
+		if (not is_skill_unlocked(skill_id) and clearance_level >= int(data.get("level_req", 1))
+				and research_cores >= int(data.get("cost_rc", 0))):
+			return true
+	return false
+
+
+func get_outpost_upgrade_cost(facility: String) -> Vector2i:
+	var lv := get_outpost_level(facility)
+	return Vector2i((lv + 1) * 400, (lv + 1) * 2)
+
+
+func can_afford_outpost_upgrade() -> bool:
+	for facility in OUTPOST_FACILITIES:
+		if get_outpost_level(facility) >= MAX_OUTPOST_UPGRADE_LEVEL:
+			continue
+		var cost := get_outpost_upgrade_cost(facility)
+		if survival_coins >= cost.x and research_cores >= cost.y:
+			return true
+	return false
 
 
 func is_sector_playable(sector_id: int) -> bool:

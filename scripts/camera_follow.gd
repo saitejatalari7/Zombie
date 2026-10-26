@@ -52,4 +52,7 @@ func _physics_process(delta: float) -> void:
 		v_offset = 0.0
 
 func add_trauma(amount: float) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if gm and not gm.saved_screen_shake:
+		return
 	trauma = clampf(trauma + amount, 0.0, 1.0)

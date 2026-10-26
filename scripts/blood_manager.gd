@@ -28,6 +28,9 @@ func _enter_tree() -> void:
 	instance = self
 
 func _ready() -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if gm:
+		max_decals = gm.get_blood_decal_limit()  # Settings: blood amount FULL / LOW
 	_init_pools()
 
 func _init_pools() -> void:

@@ -41,7 +41,7 @@ func _update_status() -> void:
 	if not is_instance_valid(case_node) or not is_instance_valid(player):
 		return
 	var dist := player.global_position.distance_to(case_node.global_position)
-	status_changed.emit("RECOVER THE FLIGHT RECORDER  ◆ %dm" % int(dist), OBJECTIVE_COLOR)
+	status_changed.emit("RECOVER THE FLIGHT RECORDER  ·  %dm" % int(dist), OBJECTIVE_COLOR)
 
 
 func _on_case_secured(_p: Player) -> void:
