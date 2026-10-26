@@ -123,98 +123,45 @@ func _ready() -> void:
 	blood_toggle_btn.pressed.connect(_on_blood_toggled)
 	close_settings_btn.pressed.connect(close_settings)
 	
-	# Listen to Orientation changes for responsive layout reflow
-	var om = get_node_or_null("/root/OrientationManager")
-	if om:
-		om.orientation_changed.connect(_on_orientation_changed)
-		_apply_responsive_layout(om.is_portrait)
-	else:
-		_apply_responsive_layout(true)
+	_apply_portrait_layout()
 	_apply_release_ui()
 
-func _on_orientation_changed(is_portrait: bool) -> void:
-	_apply_responsive_layout(is_portrait)
-
-func _apply_responsive_layout(is_portrait: bool) -> void:
-	if not is_inside_tree():
-		return
-		
-	if is_portrait:
-		# ─── PORTRAIT (1080 x 1920) ──────────────────────────────────────────
-		# Joystick: 330 px, bottom-left
-		joystick.offset_left = 70.0
-		joystick.offset_top = -470.0
-		joystick.offset_right = 400.0
-		joystick.offset_bottom = -140.0
-		
-		# Fire: 280 px round, bottom-right (tap = auto-fire on/off, hold/drag = aim)
-		fire_button.offset_left = -350.0
-		fire_button.offset_top = -420.0
-		fire_button.offset_right = -70.0
-		fire_button.offset_bottom = -140.0
-		
-		# Abilities in an arc around the fire button
-		molotov_button.offset_left = -560.0
-		molotov_button.offset_top = -330.0
-		molotov_button.offset_right = -380.0
-		molotov_button.offset_bottom = -150.0
-		
-		super_blast_button.offset_left = -270.0
-		super_blast_button.offset_top = -630.0
-		super_blast_button.offset_right = -90.0
-		super_blast_button.offset_bottom = -450.0
-		
-		climb_button.offset_left = -480.0
-		climb_button.offset_top = -540.0
-		climb_button.offset_right = -330.0
-		climb_button.offset_bottom = -390.0
-		
-		if mission_pill:
-			mission_pill.set_anchors_preset(Control.PRESET_TOP_WIDE)
-			mission_pill.offset_left = UIKit.MARGIN
-			mission_pill.offset_right = -UIKit.MARGIN
-			mission_pill.offset_top = 260.0
-			mission_pill.offset_bottom = 340.0
-	else:
-		# ─── LANDSCAPE (1920 x 1080) ─────────────────────────────────────────
-		# Movement Joystick left-anchored
-		joystick.offset_left = 80.0
-		joystick.offset_top = -400.0
-		joystick.offset_right = 400.0
-		joystick.offset_bottom = -80.0
-		
-		# Dedicated Fire / Aim Button right-anchored
-		fire_button.offset_left = -330.0
-		fire_button.offset_top = -320.0
-		fire_button.offset_right = -90.0
-		fire_button.offset_bottom = -80.0
-		
-		# Radial / Arc ability buttons arrayed around Fire button (Design Doc 6.3)
-		if auto_fire_btn:
-			auto_fire_btn.offset_left = -570.0
-			auto_fire_btn.offset_top = -140.0
-			auto_fire_btn.offset_right = -370.0
-			auto_fire_btn.offset_bottom = -80.0
-			
-		molotov_button.offset_left = -550.0
-		molotov_button.offset_top = -320.0
-		molotov_button.offset_right = -390.0
-		molotov_button.offset_bottom = -160.0
-		
-		super_blast_button.offset_left = -390.0
-		super_blast_button.offset_top = -490.0
-		super_blast_button.offset_right = -220.0
-		super_blast_button.offset_bottom = -320.0
-		
-		climb_button.offset_left = -200.0
-		climb_button.offset_top = -490.0
-		climb_button.offset_right = -40.0
-		climb_button.offset_bottom = -330.0
-		
-		if mission_pill:
-			mission_pill.offset_left = -360.0
-			mission_pill.offset_right = 360.0
-			mission_pill.offset_top = 80.0
+## The game is portrait only (1080 x 1920 canvas).
+func _apply_portrait_layout() -> void:
+	# Joystick: 330 px, bottom-left
+	joystick.offset_left = 70.0
+	joystick.offset_top = -470.0
+	joystick.offset_right = 400.0
+	joystick.offset_bottom = -140.0
+	
+	# Fire: 280 px round, bottom-right (tap = auto-fire on/off, hold/drag = aim)
+	fire_button.offset_left = -350.0
+	fire_button.offset_top = -420.0
+	fire_button.offset_right = -70.0
+	fire_button.offset_bottom = -140.0
+	
+	# Abilities in an arc around the fire button
+	molotov_button.offset_left = -560.0
+	molotov_button.offset_top = -330.0
+	molotov_button.offset_right = -380.0
+	molotov_button.offset_bottom = -150.0
+	
+	super_blast_button.offset_left = -270.0
+	super_blast_button.offset_top = -630.0
+	super_blast_button.offset_right = -90.0
+	super_blast_button.offset_bottom = -450.0
+	
+	climb_button.offset_left = -480.0
+	climb_button.offset_top = -540.0
+	climb_button.offset_right = -330.0
+	climb_button.offset_bottom = -390.0
+	
+	if mission_pill:
+		mission_pill.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		mission_pill.offset_left = UIKit.MARGIN
+		mission_pill.offset_right = -UIKit.MARGIN
+		mission_pill.offset_top = 260.0
+		mission_pill.offset_bottom = 340.0
 
 func _on_auto_fire_pressed() -> void:
 	if player:

@@ -1,5 +1,5 @@
 # Procedural Urban Layout Rules & Architectural Grammar
-## Tactical Isometric Zombie Extraction Layouts — "Red Chalk: Outbreak"
+## Tactical Isometric Zombie Extraction Layouts — "Protocol: Crimson"
 
 This document establishes the mandatory design rules, sightline geometry, and procedural variation grammar for generating urban street layouts in Godot 4 and Blender. Every procedural generation tool and manual level build must strictly adhere to these rules.
 

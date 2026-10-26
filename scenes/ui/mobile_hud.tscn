@@ -600,7 +600,7 @@ horizontal_alignment = 1
 
 [node name="SubTitle" type="Label" parent="PauseModal/Card/VBox"]
 layout_mode = 2
-text = "RED CHALK: OUTBREAK"
+text = "PROTOCOL: CRIMSON"
 label_settings = SubResource("LabelSettings_modal_sub")
 horizontal_alignment = 1
 

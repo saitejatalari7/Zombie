@@ -281,7 +281,6 @@ var saved_master_volume: float = 1.0
 var saved_sfx_volume: float = 1.0
 var saved_music_volume: float = 0.7
 var saved_haptics_enabled: bool = true
-var saved_is_portrait: bool = true
 var saved_screen_shake: bool = true
 var saved_blood_full: bool = true   # FULL vs LOW blood decals (performance)
 
@@ -727,10 +726,6 @@ func sync_settings_from_managers() -> void:
 		saved_sfx_volume = am.sfx_volume
 		saved_music_volume = am.music_volume
 		saved_haptics_enabled = am.haptics_enabled
-	
-	var om = get_node_or_null("/root/OrientationManager")
-	if om:
-		saved_is_portrait = om.is_portrait
 
 
 func _apply_loaded_settings() -> void:
@@ -740,10 +735,6 @@ func _apply_loaded_settings() -> void:
 		am.sfx_volume = saved_sfx_volume
 		am.music_volume = saved_music_volume
 		am.haptics_enabled = saved_haptics_enabled
-	
-	var om = get_node_or_null("/root/OrientationManager")
-	if om:
-		om.is_portrait = saved_is_portrait
 
 
 func save_settings_only() -> void:
@@ -787,7 +778,6 @@ func save_game() -> void:
 	config.set_value("settings", "sfx_volume", saved_sfx_volume)
 	config.set_value("settings", "music_volume", saved_music_volume)
 	config.set_value("settings", "haptics_enabled", saved_haptics_enabled)
-	config.set_value("settings", "is_portrait", saved_is_portrait)
 	config.set_value("settings", "screen_shake", saved_screen_shake)
 	config.set_value("settings", "blood_full", saved_blood_full)
 
@@ -883,7 +873,6 @@ func load_game() -> void:
 	saved_sfx_volume = _read_float(config, "settings", "sfx_volume", 1.0)
 	saved_music_volume = _read_float(config, "settings", "music_volume", 0.7)
 	saved_haptics_enabled = _read_bool(config, "settings", "haptics_enabled", true)
-	saved_is_portrait = _read_bool(config, "settings", "is_portrait", true)
 	saved_screen_shake = _read_bool(config, "settings", "screen_shake", true)
 	saved_blood_full = _read_bool(config, "settings", "blood_full", true)
 
