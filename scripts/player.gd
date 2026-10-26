@@ -30,7 +30,7 @@ var fire_timer: float = 0.0
 var super_blast_timer: float = 0.0
 
 # Auto-fire and Twin-stick aiming
-var auto_fire_enabled: bool = false
+var auto_fire_enabled: bool = true  # one-thumb play by default; the HUD toggle turns it off
 var mobile_aim_input: Vector2 = Vector2.ZERO
 var sector_bounds: Rect2 = Rect2() # Dynamic sector boundary
 

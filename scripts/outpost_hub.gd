@@ -323,6 +323,8 @@ func _refresh_sector_locks() -> void:
 		var playable: bool = gm.is_sector_playable(sector_id) if gm else sector_id == 1
 		btn.disabled = (sector_id > max_sec) or not playable
 		btn.text = "SEC-%02d" % sector_id if playable else "SEC-%02d\nCLASSIFIED" % sector_id
+		if gm and playable and sector_id > max_sec:
+			btn.tooltip_text = gm.get_sector_unlock_hint(sector_id)
 	
 	if sector_1_btn: sector_1_btn.modulate = Color(1, 0.2, 0.2) if selected_sector == 1 else Color(1, 1, 1)
 	if sector_2_btn: sector_2_btn.modulate = Color(1, 0.2, 0.2) if selected_sector == 2 else Color(1, 1, 1)

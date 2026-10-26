@@ -607,6 +607,7 @@ func show_mission_result(summary: Dictionary) -> void:
 			_add_result_label(vbox, "▲ CLEARANCE LEVEL UP!", 40, Color(1.0, 0.72, 0.0))
 		if summary.get("sector_unlocked", 0) > 0:
 			_add_result_label(vbox, "★ SECTOR %02d UNLOCKED" % summary["sector_unlocked"], 40, Color(1.0, 0.15, 0.2))
+		_add_next_goal(vbox)
 	
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 16)
@@ -625,6 +626,25 @@ func show_mission_result(summary: Dictionary) -> void:
 	hub_btn.add_theme_font_size_override("font_size", 34)
 	hub_btn.pressed.connect(goto_main_menu)
 	vbox.add_child(hub_btn)
+
+## One clear reason to play again: the next Armory upgrade, affordable now or how far off.
+func _add_next_goal(parent: Control) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if not gm:
+		return
+	var goal: Dictionary = gm.get_next_armory_goal()
+	if goal.is_empty():
+		return
+	var cost: int = goal["cost"]
+	var text: String
+	var col: Color
+	if gm.survival_coins >= cost:
+		text = "▶ UPGRADE READY: %s LV.%d (%d SC) — visit the Armory" % [goal["name"], goal["level"], cost]
+		col = Color(0.35, 1.0, 0.55)
+	else:
+		text = "▶ NEXT: %s LV.%d — %d SC more" % [goal["name"], goal["level"], cost - int(gm.survival_coins)]
+		col = Color(0.8, 0.8, 0.85)
+	_add_result_label(parent, text, 28, col)
 
 func _add_result_label(parent: Control, text: String, font_size: int, col: Color) -> void:
 	var label := Label.new()

@@ -193,7 +193,17 @@ const KILL_REWARDS: Dictionary = {
 }
 
 ## Clearance level each Sector unlocks at (index = sector id).
-const SECTOR_UNLOCK_LEVELS: Array[int] = [0, 1, 11, 26, 41]
+## A sector opens when the previous one has been extracted from once AND the player
+## has reached this clearance level (index = sector id).
+const SECTOR_UNLOCK_LEVELS: Array[int] = [0, 1, 3, 6, 10]
+
+## Armory track display names (shared with the hub and the debrief's next-goal line)
+const UPGRADE_TRACK_NAMES: Dictionary = {
+	"damage_knockback": "OVERPRESSURE ROUNDS",
+	"fire_rate_mag": "EXTENDED DRUM",
+	"penetration": "PIERCING CORE",
+	"crit_autoaim": "LASER TARGETER",
+}
 
 const COMMS_PAYOUT_BONUS_PER_TIER := 0.15  # +15% contract SC per Comms Array tier
 const MEDBAY_HEALTH_PER_TIER := 20.0       # +20 starting armor/HP per Medbay tier
@@ -204,18 +214,22 @@ const FIRST_CLEAR_MULTIPLIER := 2          # First successful extraction per sec
 const FAILURE_LOOT_KEPT := 0.3             # KIA keeps 30% of unbanked SC
 const FAILURE_XP_KEPT := 0.5               # KIA keeps 50% of combat XP
 
+## XP to go from level N to N+1 (index N). Tuned so a sector-1 run (~200-250 XP)
+## gives a level-up every 1-2 runs early on; after level 10 it's 600 + 60 per level.
 const XP_PER_LEVEL: Array[int] = [
-	0,    # Level 0 → 1 (Escape sequence / tutorial completion)
-	100,  # Level 1 → 2
-	150,  # Level 2 → 3
-	220,  # Level 3 → 4
+	0,    # Level 0 → 1 (unused)
+	150,  # Level 1 → 2
+	220,  # Level 2 → 3
+	280,  # Level 3 → 4
 	300,  # Level 4 → 5
-	400,  # Level 5 → 6
-	520,  # Level 6 → 7
-	660,  # Level 7 → 8
-	820,  # Level 8 → 9
-	1000, # Level 9 → 10
+	320,  # Level 5 → 6
+	400,  # Level 6 → 7
+	440,  # Level 7 → 8
+	470,  # Level 8 → 9
+	490,  # Level 9 → 10
 ]
+const XP_AFTER_10_BASE := 600
+const XP_AFTER_10_STEP := 60
 
 const MAX_CLEARANCE_LEVEL := 50
 const MAX_WEAPON_UPGRADE_LEVEL := 10
@@ -506,6 +520,8 @@ func complete_mission() -> Dictionary:
 	var sector_before := highest_sector_unlocked
 	sectors_cleared[str(sector)] = true
 	apply_mission_rewards(contract_sc, contract_rc, in_run_sc, contract_xp + in_run_xp)
+	_update_sector_unlock()
+	save_game()
 
 	_finish_summary(summary, level_before, sector_before)
 	return summary
@@ -572,10 +588,9 @@ func add_xp(amount: int) -> void:
 func get_xp_for_next_level() -> int:
 	if clearance_level >= MAX_CLEARANCE_LEVEL:
 		return 0
-	var index := mini(clearance_level, XP_PER_LEVEL.size() - 1)
 	if clearance_level >= XP_PER_LEVEL.size():
-		return XP_PER_LEVEL[-1] + (clearance_level - XP_PER_LEVEL.size() + 1) * 200
-	return XP_PER_LEVEL[index]
+		return XP_AFTER_10_BASE + (clearance_level - XP_PER_LEVEL.size()) * XP_AFTER_10_STEP
+	return XP_PER_LEVEL[clearance_level]
 
 
 func _check_level_up() -> void:
@@ -594,10 +609,38 @@ func _update_sector_unlock() -> void:
 
 func get_sector_for_level(level: int) -> int:
 	var sector := 1
-	for s in range(1, SECTOR_UNLOCK_LEVELS.size()):
-		if level >= SECTOR_UNLOCK_LEVELS[s]:
+	for s in range(2, SECTOR_UNLOCK_LEVELS.size()):
+		if level >= SECTOR_UNLOCK_LEVELS[s] and is_sector_cleared(s - 1):
 			sector = s
+		else:
+			break
 	return sector
+
+
+## What the player is short of for sector `sector_id` ("" when it's open).
+func get_sector_unlock_hint(sector_id: int) -> String:
+	if sector_id <= highest_sector_unlocked:
+		return ""
+	var needs: Array[String] = []
+	if not is_sector_cleared(sector_id - 1):
+		needs.append("Extract from SEC-%02d" % (sector_id - 1))
+	if clearance_level < SECTOR_UNLOCK_LEVELS[sector_id]:
+		needs.append("Reach CLR-LV.%02d" % SECTOR_UNLOCK_LEVELS[sector_id])
+	return " · ".join(needs)
+
+
+## The cheapest Armory upgrade for the equipped weapon, for the debrief's next-goal line.
+## Returns {} when everything is maxed.
+func get_next_armory_goal() -> Dictionary:
+	var best := {}
+	for track in UPGRADE_TRACKS:
+		var lv := get_weapon_upgrade_level(IMPLEMENTED_WEAPONS[0], track)
+		if lv >= MAX_WEAPON_UPGRADE_LEVEL:
+			continue
+		var cost := (lv + 1) * WEAPON_UPGRADE_COST_STEP
+		if best.is_empty() or cost < int(best["cost"]):
+			best = {"name": UPGRADE_TRACK_NAMES.get(track, track), "level": lv + 1, "cost": cost}
+	return best
 
 
 # ─── Skills ────────────────────────────────────────────────────────────────────
@@ -782,13 +825,13 @@ func load_game() -> void:
 	clearance_xp = _read_int(config, "progression", "clearance_xp", 0, 0, 999999999)
 	has_completed_tutorial = _read_bool(config, "progression", "has_completed_tutorial", false)
 	highest_sector_unlocked = _read_int(config, "progression", "highest_sector_unlocked", 1, 1, SECTOR_UNLOCK_LEVELS.size() - 1)
-	_update_sector_unlock()
 	sectors_cleared = {}
 	var cleared = config.get_value("progression", "sectors_cleared", {})
 	if cleared is Dictionary:
 		for k in cleared:
 			if cleared[k] == true:
 				sectors_cleared[str(k)] = true
+	_update_sector_unlock()
 
 	intel_found = {}
 	var intel = config.get_value("progression", "intel_found", {})
