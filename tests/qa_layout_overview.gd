@@ -25,7 +25,7 @@ func _initialize() -> void:
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 250.0
 	world.add_child(sun)
-	var sector: Node3D = load({"s1": "res://scenes/sectors/sector_1_quarantine_block.tscn", "s2": "res://scenes/sectors/sector_2_transit.tscn", "s3": "res://scenes/sectors/sector_3_industrial.tscn"}[args[0].substr(0, 2)]).instantiate()
+	var sector: Node3D = load({"s1": "res://scenes/sectors/sector_1_quarantine_block.tscn", "s2": "res://scenes/sectors/sector_2_transit.tscn", "s3": "res://scenes/sectors/sector_3_industrial.tscn", "s4": "res://scenes/sectors/sector_4_research.tscn"}[args[0].substr(0, 2)]).instantiate()
 	sector.set("layout_id", args[0])
 	world.add_child(sector)
 	cam = Camera3D.new()

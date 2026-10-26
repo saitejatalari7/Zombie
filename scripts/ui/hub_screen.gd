@@ -16,7 +16,7 @@ const SECTOR_TAGLINES := {
 	1: "Where the outbreak started. The medevac went down here, and so did the block.",
 	2: "Someone in the central terminal broadcasts every night at nine. The trains all went one way.",
 	3: "The docks went dark the night the lab ship came in. Something big came off it.",
-	4: "The lab that made Crimson. End it at the source.",
+	4: "The lab that made Crimson. Its freezers open when the power runs out.",
 }
 const TRACK_INFO := {
 	"damage_knockback": "+12% damage per level",

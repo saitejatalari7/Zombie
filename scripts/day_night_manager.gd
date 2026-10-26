@@ -36,6 +36,9 @@ const NIGHT_BG_COLOR := Color(0.05, 0.06, 0.10, 1.0)
 const SECTOR_LOOKS := {
 	2: {"sun_color": Color(1.0, 0.80, 0.58), "sun_energy": 1.75, "sun_rotation": Vector3(-34.0, 118.0, 0.0),
 		"ambient_color": Color(0.70, 0.60, 0.62), "ambient_energy": 0.24, "bg": Color(0.86, 0.76, 0.68)},
+	# The Complex: a blood-red dusk
+	4: {"sun_color": Color(1.0, 0.52, 0.42), "sun_energy": 1.6, "sun_rotation": Vector3(-40.0, 135.0, 0.0),
+		"ambient_color": Color(0.62, 0.48, 0.47), "ambient_energy": 0.34, "bg": Color(0.46, 0.24, 0.25)},
 }
 var current_sector: int = 1
 

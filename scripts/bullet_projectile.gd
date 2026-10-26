@@ -18,11 +18,18 @@ var penetration: int = 1
 var is_hyper_burst: bool = false
 var is_crit: bool = false
 var hit_entities: Array[Node3D] = []
+## Where the shot really starts (the shooter's chest). The visible bullet spawns at the
+## muzzle, which is already past a zombie in melee range, so the first hit check runs from here.
+var origin: Vector3 = Vector3.INF
+var shooter_rid: RID = RID()
 
 var impact_scene := preload("res://scenes/bullet_impact.tscn")
 
-func init(spawn_pos: Vector3, shoot_dir: Vector3, p_target: Node3D = null, p_penetration: int = 1, p_is_hyper: bool = false, p_is_crit: bool = false) -> void:
+func init(spawn_pos: Vector3, shoot_dir: Vector3, p_target: Node3D = null, p_penetration: int = 1, p_is_hyper: bool = false, p_is_crit: bool = false, p_origin: Vector3 = Vector3.INF, p_shooter: CollisionObject3D = null) -> void:
 	global_position = spawn_pos
+	origin = p_origin
+	if p_shooter:
+		shooter_rid = p_shooter.get_rid()
 	direction = shoot_dir.normalized()
 	target_claimed = p_target
 	penetration = p_penetration
@@ -51,10 +58,16 @@ func _physics_process(delta: float) -> void:
 	
 	# Raycast check for collision
 	var space := get_world_3d().direct_space_state
-	var query := PhysicsRayQueryParameters3D.create(current_pos, next_pos)
+	var ray_from := current_pos
+	if origin != Vector3.INF:
+		ray_from = origin  # first step only: cover the stretch between chest and muzzle
+		origin = Vector3.INF
+	var query := PhysicsRayQueryParameters3D.create(ray_from, next_pos)
 	query.collision_mask = 3 # Layer 1 (Environment) + Layer 2 (Zombies)
 	
 	var exclude_rids: Array[RID] = []
+	if shooter_rid.is_valid():
+		exclude_rids.append(shooter_rid)
 	for e in hit_entities:
 		if is_instance_valid(e) and e.has_method("get_rid"):
 			exclude_rids.append(e.get_rid())

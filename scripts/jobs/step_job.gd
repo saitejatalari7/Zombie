@@ -9,7 +9,8 @@ class_name StepJob
 ##   defend  — {marker, seconds}: hold a wide zone while the bar fills; the horde surges
 ##   destroy — {marker}: destroy an InfestationNest that keeps spawning zombies
 ##   carry   — {marker}: pick up the flight-recorder case (slows you, runners hunt you)
-##   hunt    — {marker, health}: a Crimson Brute (oversized heavy) waits there; kill it
+##   hunt    — {marker, health, scale?, frenzy?}: a Crimson Brute (oversized heavy) waits
+##             there; kill it. frenzy: the horde surges for the whole fight
 ## Markers are children of the sector's "StepMarkers" node, looked up by name.
 
 const STEP_COLOR := Color(1.0, 0.72, 0.0)
@@ -81,7 +82,8 @@ func _next_step() -> void:
 			_step_node = case_node
 		"hunt":
 			var brute: Zombie = BRUTE_SCENE.instantiate()
-			brute.name = "CrimsonBrute"
+			brute.name = String(step.get("boss_name", "CrimsonBrute"))
+			var bscale := float(step.get("scale", BRUTE_SCALE))
 			brute.max_health = float(step.get("health", 9000.0))
 			brute.attack_damage = 34.0
 			brute.stagger_duration = 0.0  # bullets don't stop it; molotovs and distance do
@@ -91,16 +93,18 @@ func _next_step() -> void:
 			brute.global_position = _marker_pos + Vector3(0.0, 0.2, 0.0)
 			var vis := brute.get_node_or_null("Visuals") as Node3D
 			if vis:
-				vis.scale = Vector3.ONE * BRUTE_SCALE
+				vis.scale = Vector3.ONE * bscale
 			# Body matches the bigger model, so point-blank shots spawn outside it and hit
 			var col := brute.get_node_or_null("CollisionShape3D") as CollisionShape3D
 			if col and col.shape is CapsuleShape3D:
 				var cap := (col.shape as CapsuleShape3D).duplicate() as CapsuleShape3D
-				cap.radius *= BRUTE_SCALE
-				cap.height *= BRUTE_SCALE
+				cap.radius *= bscale
+				cap.height *= bscale
 				col.shape = cap
-				col.position.y *= BRUTE_SCALE
-			brute.attack_range = 2.3
+				col.position.y *= bscale
+			brute.attack_range = 1.6 * bscale
+			if step.get("frenzy", false) and spawner:
+				spawner.evac_frenzy = true  # cleared by _next_step when the boss dies
 			brute.died.connect(_on_brute_died)
 			_step_node = brute
 		"defend":

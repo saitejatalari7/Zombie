@@ -789,7 +789,8 @@ func fire_rifle(_primary_target: Node3D = null) -> void:
 		
 		var bullet: Node3D = bullet_projectile_scene.instantiate()
 		get_parent().add_child(bullet)
-		bullet.init(spawn_pos, bullet_dir, _primary_target, pen, is_hyper_burst, is_crit)
+		bullet.init(spawn_pos, bullet_dir, _primary_target, pen, is_hyper_burst, is_crit,
+			global_position + Vector3(0.0, spawn_pos.y - global_position.y, 0.0), self)
 	
 func activate_molotov_powerup(duration: float = 15.0) -> void:
 	molotov_powerup_timer = duration
@@ -883,37 +884,42 @@ func get_best_target_with_los(max_dist: float) -> Node3D:
 	var max_dist_sq := max_dist * max_dist
 	var p_pos := global_position
 	
-	# Prioritizing Runners > Bosses > Shamblers
-	var priority_groups: Array[String] = ["runners", "bosses", "zombies"]
-	for grp in priority_groups:
-		var candidates := get_tree().get_nodes_in_group(grp)
-		var closest: Node3D = null
-		var min_d_sq := max_dist_sq
-		
-		for candidate in candidates:
-			if not is_instance_valid(candidate) or not (candidate is Node3D):
-				continue
-			if candidate.get("is_dead"):
-				continue
-			var c_pos: Vector3 = (candidate as Node3D).global_position
-			var dx: float = c_pos.x - p_pos.x
-			var dz: float = c_pos.z - p_pos.z
-			var d_sq: float = dx * dx + dz * dz
-			if d_sq <= min_d_sq:
-				var target_pos: Vector3 = c_pos + Vector3(0, 0.9, 0)
-				var query := PhysicsRayQueryParameters3D.create(eye_pos, target_pos, 1)
-				# Exclude the candidate too: targets that are world solids (e.g. nests) would block their own ray
-				var excl: Array[RID] = [self.get_rid()]
-				if candidate is CollisionObject3D:
-					excl.append((candidate as CollisionObject3D).get_rid())
-				query.exclude = excl
-				var hit := space_state.intersect_ray(query)
-				if hit.is_empty():
-					min_d_sq = d_sq
-					closest = candidate
-		if closest != null:
-			cached_target = closest
-			return closest
+	# Nearest visible threat wins. Runners and heavies count as a little closer than they
+	# are (they're the dangerous ones), but a strict group order would keep shooting at a
+	# far runner while a Brute stands on top of the player.
+	var closest: Node3D = null
+	var best_score := INF
+	# "bosses" also holds the infestation nests, which are not in "zombies"
+	var pool: Array = get_tree().get_nodes_in_group("zombies") + get_tree().get_nodes_in_group("bosses")
+	for candidate in pool:
+		if not is_instance_valid(candidate) or not (candidate is Node3D):
+			continue
+		if candidate.get("is_dead"):
+			continue
+		var c_pos: Vector3 = (candidate as Node3D).global_position
+		var dx: float = c_pos.x - p_pos.x
+		var dz: float = c_pos.z - p_pos.z
+		var d_sq: float = dx * dx + dz * dz
+		if d_sq > max_dist_sq:
+			continue
+		var score := d_sq
+		if candidate.is_in_group("runners") or candidate.is_in_group("bosses"):
+			score *= 0.6
+		if score >= best_score:
+			continue
+		var target_pos: Vector3 = c_pos + Vector3(0, 0.9, 0)
+		var query := PhysicsRayQueryParameters3D.create(eye_pos, target_pos, 1)
+		# Exclude the candidate too: targets that are world solids (e.g. nests) would block their own ray
+		var excl: Array[RID] = [self.get_rid()]
+		if candidate is CollisionObject3D:
+			excl.append((candidate as CollisionObject3D).get_rid())
+		query.exclude = excl
+		if space_state.intersect_ray(query).is_empty():
+			best_score = score
+			closest = candidate
+	if closest != null:
+		cached_target = closest
+		return closest
 	
 	cached_target = null
 	return null

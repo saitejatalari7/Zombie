@@ -595,6 +595,13 @@ func show_mission_result(summary: Dictionary) -> void:
 		xp_card.add_child(xv)
 		col.add_child(xp_card)
 		
+		if success and summary.get("finale", false):
+			var ending := UIKit.card("SuccessCard")
+			var ev := UIKit.vbox(8)
+			ev.add_child(UIKit.label("PROTOCOL CRIMSON: ENDED", "SubheadLabel", UIKit.GREEN, 44))
+			ev.add_child(UIKit.paragraph("Crimson Prime is dead and Patient Zero's sample is out. The city isn't saved yet, but now it can be. Thank you, WARDEN.", UIKit.TEXT, 32))
+			ending.add_child(ev)
+			col.add_child(ending)
 		if int(summary.get("sector_unlocked", 0)) > 0:
 			var unlock := UIKit.card("SuccessCard")
 			unlock.add_child(UIKit.label("SECTOR %d UNLOCKED" % int(summary["sector_unlocked"]), "SubheadLabel", UIKit.GREEN))

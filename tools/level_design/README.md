@@ -27,7 +27,8 @@ python3 tools/level_design/build_layouts.py s1_market    # one
 
 Block kinds: `building`, `shed`, `wall`, `planter`, `cover`, `containers`, `bus`,
 `retaining` (under a raised floor; never capped), `water` (canal surface), `bridge`,
-`tracks` (walkable rails), `ballast`, `railcar`, `crane`, `tank` (fuel tank), `pipes` (pipe rack).
+`tracks` (walkable rails), `ballast`, `railcar`, `crane`, `tank` (fuel tank), `pipes` (pipe rack),
+`freezer`, `helipad` (painted pad on a walkable floor). Rooms of 300 m2 or more get a soft fill light.
 Container stacks keep full height behind pallet strips (see `stack()` in the Sector 03 layouts).
 
 Never edit `scripts/layout/plans/*.gd` by hand.

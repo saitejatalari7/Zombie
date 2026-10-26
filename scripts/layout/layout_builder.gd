@@ -90,6 +90,8 @@ func _init_materials() -> void:
 	_materials["railcar"] = _color_mat(Color(0.62, 0.30, 0.26), 0.75)
 	_materials["crane"] = _color_mat(Color(0.86, 0.58, 0.16), 0.6)
 	_materials["hazard"] = _color_mat(Color(0.12, 0.12, 0.13), 0.6)
+	_materials["cryo"] = _color_mat(Color(0.35, 0.62, 0.86), 0.4)
+	_materials["lab"] = _color_mat(Color(0.93, 0.94, 0.95), 0.5)
 
 
 func _color_mat(color: Color, roughness: float = 0.85) -> StandardMaterial3D:
@@ -140,7 +142,7 @@ func _commit_meshes() -> void:
 		mi.name = "Layout_" + mat_key
 		mi.mesh = st.commit()
 		mi.material_override = _materials[mat_key]
-		if mat_key in ["ground", "paving", "street", "soil", "water", "sleeper", "steel"]:
+		if mat_key in ["ground", "paving", "street", "soil", "water", "sleeper", "steel", "stripe"]:
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # flat: shadows only cost
 		_root.add_child(mi)
 	_tools.clear()
@@ -261,6 +263,20 @@ func _build_block(b: Dictionary) -> void:
 		"pipes":
 			_pipe_rack(x0, x1, z0, z1, base, h)
 			_collider(size, center)
+		"freezer":
+			# Cold-storage unit: white body, blue band, compressor on top
+			_solid("lab", size, center)
+			_box("cryo", Vector3(size.x + 0.04, 0.25, size.z + 0.04), Vector3(center.x, base + h * 0.7, center.z))
+			_box("steel", Vector3(minf(size.x, 1.6) * 0.6, 0.3, minf(size.z, 1.6) * 0.6), Vector3(center.x, top + 0.15, center.z))
+		"helipad":
+			# Painted landing pad on a walkable floor: a ring and an H
+			var cxz := Vector3(center.x, base + 0.02, center.z)
+			var r := minf(size.x, size.z) * 0.5
+			_cyl("hazard", r, 0.02, cxz)
+			_cyl("lab", r - 0.3, 0.025, cxz)
+			_box("stripe", Vector3(0.5, 0.03, r * 0.9), cxz + Vector3(-r * 0.3, 0.0, 0.0))
+			_box("stripe", Vector3(0.5, 0.03, r * 0.9), cxz + Vector3(r * 0.3, 0.0, 0.0))
+			_box("stripe", Vector3(r * 0.6, 0.03, 0.5), cxz)
 		"bridge":
 			# Walkable deck painted over water; the ground collider is the floor
 			_box("paving", Vector3(size.x, 0.05, size.z), Vector3(center.x, top - 0.025, center.z))
@@ -451,6 +467,18 @@ func _build_room(r: Dictionary) -> void:
 	volume.add_child(col)
 	room.add_child(volume)
 	room.setup(volume, pieces)
+	# Big halls sit in the long shadows of the buildings around them: a soft fill light
+	# keeps figures readable inside (no shadows, one light per hall, so it stays cheap)
+	if (x1 - x0) * (z1 - z0) >= 300.0:
+		var fill := OmniLight3D.new()
+		fill.name = "HallFill"
+		fill.position = Vector3(cx, base + h - 0.6, cz)
+		fill.light_color = Color(0.92, 0.95, 1.0)
+		fill.light_energy = 1.1
+		fill.omni_range = maxf(x1 - x0, z1 - z0) * 0.6
+		fill.omni_attenuation = 0.7
+		fill.shadow_enabled = false
+		room.add_child(fill)
 
 
 ## One wall run between a0..a1 along its axis, from y0 to y1. Far walls are merged
