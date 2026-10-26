@@ -81,7 +81,7 @@ func _drive() -> void:
 			phase_frames = 0
 			if job.has_method("_current"):
 				print("  step %d: %s" % [idx + 1, job._current().get("title", "")])
-		if phase_frames > 1200:
+		if phase_frames > 60 * 240:  # frames, not seconds: headless runs faster than real time
 			_fail("stuck on step %d" % (idx + 1))
 			return
 		if not job.has_method("_current"):
@@ -95,7 +95,7 @@ func _drive() -> void:
 		match String(step.get("type", "")):
 			"kill":
 				job.on_run_kills_changed(job.run_kills + 1)
-			"search", "reach":
+			"search", "reach", "defend":
 				p.global_position = job._marker_pos + Vector3(0.0, 0.3, 0.0)
 				p.velocity = Vector3.ZERO
 			"destroy":
@@ -113,5 +113,5 @@ func _drive() -> void:
 			var gm = root.get_node("/root/GameManager")
 			print("  extracted; debrief shown: ", s.hud.get_node_or_null("MissionResult") != null)
 			_next_contract()
-		elif phase_frames > 60 * 70:
+		elif phase_frames > 60 * 240:
 			_fail("evac never completed (in LZ: %s)" % str(s.player_in_lz))

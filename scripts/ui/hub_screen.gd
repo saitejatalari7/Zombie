@@ -14,7 +14,7 @@ const CARBINE_SCENE := preload("res://assets/models/weapons/assault_carbine.glb"
 const SECTOR_NAMES := {1: "Quarantine Block", 2: "Transit Grid", 3: "Blackout Docks", 4: "Crimson Complex"}
 const SECTOR_TAGLINES := {
 	1: "Where the outbreak started. The medevac went down here, and so did the block.",
-	2: "Rail yards and tunnels. Survivors are holding out in the terminal.",
+	2: "Someone in the central terminal broadcasts every night at nine. The trains all went one way.",
 	3: "No power, no light. Something big nests in the cranes.",
 	4: "The lab that made Crimson. End it at the source.",
 }

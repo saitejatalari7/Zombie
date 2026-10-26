@@ -82,9 +82,11 @@ func get_enemy_type() -> String:
 	return "shambler"
 
 func _find_player() -> void:
-	var players := get_tree().get_nodes_in_group("player")
-	if players.size() > 0:
-		target_player = players[0] as Player
+	# Skip a player from a scene that is being unloaded (Retry / scene change)
+	for p in get_tree().get_nodes_in_group("player"):
+		if is_instance_valid(p) and not p.is_queued_for_deletion():
+			target_player = p as Player
+			return
 
 func _physics_process(delta: float) -> void:
 	if is_dead or state == State.DEAD:

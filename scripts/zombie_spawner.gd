@@ -28,6 +28,17 @@ var player: Player = null
 var is_frenzy: bool = false
 ## Set by Main while the player holds the LZ: frenzy pacing until evac arrives
 var evac_frenzy: bool = false
+## Extra runner share and how early heavies appear; raised per sector by configure_for_sector
+var runner_bonus: float = 0.0
+var tank_wave: int = 2
+
+## Each sector pushes harder: more runners, a bigger horde, heavies from the first wave.
+func configure_for_sector(sector_id: int) -> void:
+	var tier := clampi(sector_id - 1, 0, 3)
+	runner_bonus = 0.08 * float(tier)
+	max_active_zombies += 2 * tier
+	spawn_interval = maxf(0.9, spawn_interval - 0.12 * float(tier))
+	tank_wave = 1 if tier >= 1 else 2
 
 func _ready() -> void:
 	refresh_spawn_points()
@@ -117,12 +128,12 @@ func spawn_single_zombie() -> void:
 	var roll := randf()
 	var scene_to_spawn: PackedScene
 	
-	if current_wave >= 3 and roll < 0.20 and from_building:
+	if current_wave >= tank_wave + 1 and roll < 0.20 and from_building:
 		# Tanks break out from building doorways/bays in Wave 3+
 		scene_to_spawn = tank_scene
-	elif roll < (0.24 + float(current_wave) * 0.04):
+	elif roll < (0.24 + runner_bonus + float(current_wave) * 0.04):
 		scene_to_spawn = runner_scene
-	elif roll < 0.32 and current_wave >= 2:
+	elif roll < 0.32 + runner_bonus and current_wave >= tank_wave:
 		scene_to_spawn = tank_scene
 	else:
 		scene_to_spawn = zombie_scene

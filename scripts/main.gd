@@ -50,6 +50,7 @@ func _ready() -> void:
 	
 	hud.setup(player, spawner)
 	spawner.setup_player(player)
+	spawner.configure_for_sector(sec_id)
 	_start_mission(sec_id)
 	
 	# Connect legacy WoodenBarricade if present in legacy whitebox map

@@ -82,6 +82,10 @@ func _init_materials() -> void:
 	_materials["stripe"] = _color_mat(Color(0.72, 0.0, 0.04), 0.5)
 	_materials["interior"] = _color_mat(Color(0.70, 0.70, 0.73))
 	_materials["water"] = _color_mat(Color(0.20, 0.27, 0.32), 0.08)
+	_materials["steel"] = _color_mat(Color(0.42, 0.43, 0.46), 0.35)
+	_materials["sleeper"] = _color_mat(Color(0.30, 0.27, 0.25), 0.95)
+	_materials["ballast"] = _color_mat(Color(0.50, 0.49, 0.47), 1.0)
+	_materials["railcar"] = _color_mat(Color(0.62, 0.30, 0.26), 0.75)
 
 
 func _color_mat(color: Color, roughness: float = 0.85) -> StandardMaterial3D:
@@ -132,7 +136,7 @@ func _commit_meshes() -> void:
 		mi.name = "Layout_" + mat_key
 		mi.mesh = st.commit()
 		mi.material_override = _materials[mat_key]
-		if mat_key in ["ground", "paving", "street", "soil", "water"]:
+		if mat_key in ["ground", "paving", "street", "soil", "water", "sleeper", "steel"]:
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # flat: shadows only cost
 		_root.add_child(mi)
 	_tools.clear()
@@ -232,11 +236,42 @@ func _build_block(b: Dictionary) -> void:
 			# Canal surface just above the ground slab; the ground collider underneath is
 			# never reached (railings line every bank), so it needs no collider of its own
 			_box("water", Vector3(size.x, 0.03, size.z), Vector3(center.x, top - 0.015, center.z))
+		"tracks":
+			_tracks(x0, x1, z0, z1, base)
+		"ballast":
+			_solid("ballast", size, center)
+		"railcar":
+			# Wagon body, dark window band, pale roof
+			_solid("railcar", size, center)
+			var long_x := size.x >= size.z
+			if h > 1.6:
+				var band := Vector3(size.x + 0.06, 0.6, size.z - 0.8) if not long_x else Vector3(size.x - 0.8, 0.6, size.z + 0.06)
+				_box("window", band, Vector3(center.x, base + h * 0.68, center.z))
+			_box("clay", Vector3(size.x - 0.2, 0.12, size.z - 0.2), Vector3(center.x, top + 0.06, center.z))
 		"bridge":
 			# Walkable deck painted over water; the ground collider is the floor
 			_box("paving", Vector3(size.x, 0.05, size.z), Vector3(center.x, top - 0.025, center.z))
 		_:
 			_solid("wall", size, center)
+
+
+## Walkable rail track: sleepers every 0.8 m and two rails, laid along the long side.
+func _tracks(x0: float, x1: float, z0: float, z1: float, y: float) -> void:
+	var along_x := (x1 - x0) >= (z1 - z0)
+	var length := (x1 - x0) if along_x else (z1 - z0)
+	var cx := (x0 + x1) * 0.5
+	var cz := (z0 + z1) * 0.5
+	var gauge := 0.72
+	var rail := Vector3(length, 0.08, 0.08) if along_x else Vector3(0.08, 0.08, length)
+	for sgn: float in [-1.0, 1.0]:
+		var off: Vector3 = Vector3(0.0, 0.0, gauge * sgn) if along_x else Vector3(gauge * sgn, 0.0, 0.0)
+		_box("steel", rail, Vector3(cx, y + 0.06, cz) + off)
+	var p := 0.4
+	while p < length:
+		var sleeper := Vector3(0.24, 0.04, 2.1) if along_x else Vector3(2.1, 0.04, 0.24)
+		var pos := Vector3(x0 + p, y + 0.01, cz) if along_x else Vector3(cx, y + 0.01, z0 + p)
+		_box("sleeper", sleeper, pos)
+		p += 0.8
 
 
 func _parapet(x0: float, x1: float, z0: float, z1: float, top: float, ph: float) -> void:

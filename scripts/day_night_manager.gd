@@ -29,6 +29,14 @@ const NIGHT_AMBIENT_COLOR := Color(0.02, 0.02, 0.03, 1.0) # #050507 near-zero
 const NIGHT_AMBIENT_ENERGY := 0.06
 const NIGHT_BG_COLOR := Color(0.02, 0.02, 0.03, 1.0)
 
+## Daytime look per sector (sun colour/energy/angle, ambient, sky). Sectors not listed use the
+## DAY_* constants. Each sector reads as a different time of day.
+const SECTOR_LOOKS := {
+	2: {"sun_color": Color(1.0, 0.80, 0.58), "sun_energy": 1.75, "sun_rotation": Vector3(-34.0, 118.0, 0.0),
+		"ambient_color": Color(0.70, 0.60, 0.62), "ambient_energy": 0.24, "bg": Color(0.86, 0.76, 0.68)},
+}
+var current_sector: int = 1
+
 # Flicker state
 var _flicker_timer: float = 0.0
 var _flicker_interval: float = 0.12
@@ -60,6 +68,7 @@ func set_night_mode() -> void:
 	self.current_mode = LightingMode.NIGHT_BLACKOUT
 
 func set_sector_mode(sector_id: int, contract_is_night: bool = false) -> void:
+	current_sector = sector_id
 	# Sector 3 is Blackout Industrial Zone — Night Ops Mandatory!
 	if sector_id == 3 or contract_is_night:
 		set_night_mode()
@@ -91,3 +100,13 @@ func apply_to_environment(env: Environment, sun: DirectionalLight3D) -> void:
 			sun.light_color = DAY_SUN_COLOR
 			sun.light_energy = DAY_SUN_ENERGY
 			sun.shadow_enabled = true
+		var look: Dictionary = SECTOR_LOOKS.get(current_sector, {})
+		if not look.is_empty():
+			if env:
+				env.background_color = look["bg"]
+				env.ambient_light_color = look["ambient_color"]
+				env.ambient_light_energy = look["ambient_energy"]
+			if sun:
+				sun.light_color = look["sun_color"]
+				sun.light_energy = look["sun_energy"]
+				sun.rotation_degrees = look["sun_rotation"]

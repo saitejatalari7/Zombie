@@ -6,12 +6,14 @@ class_name StepJob
 ##   kill    — {count}: kill N hostiles (anywhere)
 ##   reach   — {marker, radius}: walk to a marker
 ##   search  — {marker, seconds}: stand at a marker while a bar fills (leaving pauses it)
+##   defend  — {marker, seconds}: hold a wide zone while the bar fills; the horde surges
 ##   destroy — {marker}: destroy an InfestationNest that keeps spawning zombies
 ##   carry   — {marker}: pick up the flight-recorder case (slows you, runners hunt you)
 ## Markers are children of the sector's "StepMarkers" node, looked up by name.
 
 const STEP_COLOR := Color(1.0, 0.72, 0.0)
 const SEARCH_RADIUS := 2.2
+const DEFEND_RADIUS := 6.0
 const CASE_SCENE := preload("res://scenes/objective_case.tscn")
 
 var steps: Array = []
@@ -35,6 +37,10 @@ func _current() -> Dictionary:
 
 func _next_step() -> void:
 	progress_changed.emit(0.0, false)
+	if spawner:
+		spawner.evac_frenzy = false  # a defend step's surge ends with the step
+	if String(_current().get("type", "")) == "defend" and is_instance_valid(_step_node):
+		_step_node.queue_free()
 	index += 1
 	_step_node = null
 	_search_time = 0.0
@@ -70,6 +76,11 @@ func _next_step() -> void:
 			case_node.case_secured.connect(func(_p: Player): _on_step_object_done())
 			case_node.add_child(make_beacon(Color(STEP_COLOR, 0.3), 1.6))
 			_step_node = case_node
+		"defend":
+			var zone := make_beacon(Color(STEP_COLOR, 0.22), DEFEND_RADIUS)
+			sector.add_child(zone)
+			zone.global_position = _marker_pos
+			_step_node = zone
 
 	if step.has("radio"):
 		radio_message.emit(String(step["radio"]))
@@ -89,10 +100,13 @@ func _process(delta: float) -> void:
 			if _flat_dist(player.global_position, _marker_pos) <= float(step.get("radius", 3.0)):
 				_next_step()
 				return
-		"search":
+		"search", "defend":
 			var seconds := float(step.get("seconds", 3.0))
-			var inside := (_flat_dist(player.global_position, _marker_pos) <= SEARCH_RADIUS
+			var radius := DEFEND_RADIUS if String(step.get("type", "")) == "defend" else SEARCH_RADIUS
+			var inside := (_flat_dist(player.global_position, _marker_pos) <= radius
 				and absf(player.global_position.y - _marker_pos.y) < 1.5)
+			if String(step.get("type", "")) == "defend" and spawner:
+				spawner.evac_frenzy = inside  # the surge comes while you hold
 			if inside:
 				_search_time += delta
 				if _search_time >= seconds:
@@ -127,6 +141,11 @@ func _update_status() -> void:
 	match String(step.get("type", "")):
 		"kill":
 			detail = "  %d / %d" % [run_kills - _kills_at_step_start, int(step.get("count", 10))]
+		"defend":
+			if _flat_dist(player.global_position, _marker_pos) <= DEFEND_RADIUS:
+				detail = "  HOLD %ds" % int(ceil(float(step.get("seconds", 20.0)) - _search_time))
+			else:
+				detail = "  ·  %dm" % int(_flat_dist(player.global_position, _marker_pos))
 		"search":
 			if _search_time > 0.0 and _flat_dist(player.global_position, _marker_pos) <= SEARCH_RADIUS:
 				detail = "  SEARCHING..."
