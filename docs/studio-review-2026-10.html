@@ -1,0 +1,274 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Protocol: Crimson Greenlight Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column, a verdict band up top, score ledger, then prioritized lists */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --fg: #15171c; --dim: #5d6370; --line: #dde0e6;
+  --crimson: #d4142b; --crimson-soft: #fde8eb; --amber: #b86e00; --amber-soft: #fff3df;
+  --green: #1f8a4c; --green-soft: #e3f4ea;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Barlow", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101216; --surface: #181b21; --fg: #eceef2; --dim: #9aa1ae; --line: #2a2e37;
+  --crimson: #ff4a5e; --crimson-soft: #3a1419; --amber: #ffb547; --amber-soft: #33270f;
+  --green: #4fd08a; --green-soft: #12301f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #101216; --surface: #181b21; --fg: #eceef2; --dim: #9aa1ae; --line: #2a2e37;
+  --crimson: #ff4a5e; --crimson-soft: #3a1419; --amber: #ffb547; --amber-soft: #33270f;
+  --green: #4fd08a; --green-soft: #12301f; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 400 17px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; }
+main { max-width: 860px; margin: 0 auto; display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 800; line-height: 1.05; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(40px, 7vw, 64px); text-transform: uppercase; }
+h1 span { color: var(--crimson); }
+h2 { font-size: 30px; text-transform: uppercase; margin-bottom: 14px; }
+h3 { font-size: 21px; font-weight: 600; margin-bottom: 4px; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 500 12px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+section { display: grid; gap: 14px; min-width: 0; }
+.lede { color: var(--dim); font-size: 19px; }
+
+.verdict { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center;
+  border: 2px solid var(--crimson); background: var(--crimson-soft); border-radius: 14px; padding: 22px 24px; }
+.big { font: 800 84px/0.9 var(--display); color: var(--crimson); font-variant-numeric: tabular-nums; }
+.big small { font-size: 32px; color: var(--dim); }
+.verdict p + p { margin-top: 8px; }
+@media (max-width: 520px) { .verdict { grid-template-columns: 1fr; } }
+
+.scores { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 200px 46px 1fr; gap: 16px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.row .name { font-weight: 600; }
+.row .n { font: 500 18px var(--mono); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--crimson); }
+.row.mid .bar i { background: var(--amber); }
+.row.ok .bar i { background: var(--green); }
+.why { color: var(--dim); font-size: 15px; min-width: 0; }
+@media (max-width: 620px) { .row { grid-template-columns: 1fr 46px; } .row .why { grid-column: 1 / -1; } }
+
+ol.blockers, ol.plan { margin: 0; padding: 0; list-style: none; counter-reset: n; display: grid; gap: 12px; }
+ol.blockers > li, ol.plan > li { counter-increment: n; display: grid; grid-template-columns: 40px 1fr; gap: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+ol.blockers > li::before, ol.plan > li::before { content: counter(n); font: 800 30px/1 var(--display); color: var(--crimson); }
+ol.plan > li::before { color: var(--fg); }
+li p { color: var(--dim); font-size: 15.5px; }
+.tag { display: inline-block; font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: 2px; }
+.t-ver { background: var(--green-soft); color: var(--green); }
+.t-code { background: var(--amber-soft); color: var(--amber); }
+.t-eff { background: var(--surface); color: var(--dim); border: 1px solid var(--line); }
+
+ul.plain { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+ul.plain li::marker { color: var(--crimson); }
+
+.check { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 18px; }
+.check div { display: flex; gap: 10px; align-items: baseline; font-size: 15.5px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.check b { font: 500 12px var(--mono); min-width: 52px; text-align: center; border-radius: 4px; padding: 1px 0; }
+.y { background: var(--green-soft); color: var(--green); }
+.p { background: var(--amber-soft); color: var(--amber); }
+.x { background: var(--crimson-soft); color: var(--crimson); }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+th { font: 500 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+
+.phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.phase { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.phase ul { margin: 0; padding-left: 18px; font-size: 15.5px; color: var(--dim); display: grid; gap: 4px; }
+.foot { color: var(--dim); font-size: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+code { font: 500 0.88em var(--mono); }
+a:focus-visible { outline: 2px solid var(--crimson); outline-offset: 2px; }
+</style>
+
+<main>
+  <header style="display:grid;gap:12px">
+    <div class="eyebrow">Pre-launch studio review · Godot 4.6 · Android · 27 Oct 2026</div>
+    <h1>Protocol: <span>Crimson</span></h1>
+    <p class="lede">A portrait zombie extraction shooter: burn the hives, run the contract, hold the LZ until the chopper lands. This review covers game quality, retention, monetization and what Google Play requires before release.</p>
+  </header>
+
+  <div class="verdict">
+    <div class="big">4.2<small>/10</small></div>
+    <div>
+      <p><strong>Verdict: not ready for soft launch. Greenlight a 2–3 week readiness sprint that ends in a Google Play closed test.</strong> A new personal developer account needs that closed test anyway: at least 12 testers for 14 days.</p>
+      <p>The core loop, the data-driven contracts, crash-safe saves and a distinctive white-and-crimson look are real strengths. What's missing is a tutorial, anything that brings players back, monetization, analytics and a build Play will accept. Combat swings between trivial and deadly.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>Scorecard</h2>
+    <div class="scores">
+      <div class="row"><span class="name">First impression / tutorial</span><span class="n">3</span><span class="why">No tutorial exists (the completion flag is never set). There are no control hints, and the first step is a hive fight, the hardest moment in the game.<span class="bar"><i style="width:30%"></i></span></span></div>
+      <div class="row mid"><span class="name">Core gameplay feel</span><span class="n">5</span><span class="why">The loop is solid. The open horde barely damages you in sectors 1–3, while hive fights deal 700–3,000 damage. No hit-stop or kill-streak feedback.<span class="bar"><i style="width:50%"></i></span></span></div>
+      <div class="row ok"><span class="name">Mobile controls</span><span class="n">6</span><span class="why">Multi-touch passes 10/10 and auto-fire is on by default. There's no option to swap the stick side, the Android back button quits mid-run, and the 7.5 m auto-fire reach is short against a ~20 m view.<span class="bar"><i style="width:60%"></i></span></span></div>
+      <div class="row"><span class="name">Visuals / art direction</span><span class="n">4</span><span class="why">The hub is clean. In a run the world looks like an untextured white test level, and characters are only 3–4% of screen height. The icon promises a more detailed game.<span class="bar"><i style="width:40%"></i></span></span></div>
+      <div class="row mid"><span class="name">Audio</span><span class="n">5</span><span class="why">The set is complete: effects, 6 music loops, volume sliders, haptics and a boss-music switch. It's all synthesized and hasn't been heard on a phone.<span class="bar"><i style="width:50%"></i></span></span></div>
+      <div class="row ok"><span class="name">UI / UX</span><span class="n">6</span><span class="why">Good tabs and an "Upgrade now" button after each run. Missing: safe-area handling, back-button handling, privacy/credits links and localization.<span class="bar"><i style="width:60%"></i></span></span></div>
+      <div class="row mid"><span class="name">Progression &amp; economy</span><span class="n">5</span><span class="why">Clear, fair currencies. Only 1 weapon and 2 skills are in the game, intel cores can be lost for good, and nothing follows the ending.<span class="bar"><i style="width:50%"></i></span></span></div>
+      <div class="row"><span class="name">Content depth</span><span class="n">4</span><span class="why">13 contracts on 12 layouts, about 2–3 hours of play. One weapon, three enemy types plus a boss, no endless mode.<span class="bar"><i style="width:40%"></i></span></span></div>
+      <div class="row"><span class="name">Retention design</span><span class="n">2</span><span class="why">No dailies, streaks, events, notifications, cloud save or endgame.<span class="bar"><i style="width:20%"></i></span></span></div>
+      <div class="row"><span class="name">Monetization readiness</span><span class="n">1</span><span class="why">Nothing exists yet: no billing, no ads, no consent flow, no internet permission.<span class="bar"><i style="width:10%"></i></span></span></div>
+      <div class="row mid"><span class="name">Performance / tech risk</span><span class="n">5</span><span class="why">Saves are atomic, and native libraries meet the 16 KB page-size rule. Every shot creates new objects with no pooling, about 6 MB of dev files ship in the APK, and it hasn't been profiled on a phone.<span class="bar"><i style="width:50%"></i></span></span></div>
+      <div class="row"><span class="name">Play Store readiness</span><span class="n">2</span><span class="why">The build is a test-signed APK. Play needs an AAB, a private upload key, target API 36, version-code bumps, a privacy policy and store assets.<span class="bar"><i style="width:20%"></i></span></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Launch blockers</h2>
+    <ol class="blockers">
+      <li><div><h3>No tutorial or first-time flow <span class="tag t-ver">verified</span></h3><p>Nothing explains the controls, and the first thing a new player meets is a hive fight. This is the largest risk to day-1 retention. The <code>has_completed_tutorial</code> flag in <code>game_manager.gd</code> is never set to true.</p></div></li>
+      <li><div><h3>Combat swings between trivial and deadly <span class="tag t-ver">measured</span></h3><p>In 60 seconds standing still, the player took 0 damage in s1_beacon, 40 in s2_medic and 1,104 in s4_core. Fighting the hives in s1_beacon cost 2,995 HP over 183 s, against 100 max HP. Causes:</p><ul class="plain"><li>Zombies have 6× health.</li><li>Packs spawn 16–22 m away and walk into a 7.5 m auto-fire ring.</li><li>Hive defenders ignore the global spawn cap.</li></ul></div></li>
+      <li><div><h3>The build can't go to Play <span class="tag t-ver">verified</span></h3><ul class="plain"><li>It's an APK, not an AAB, and the Gradle build is off.</li><li>It's signed with the public test key. If that key signs the first upload, it becomes the app's permanent upload key, so it must never be used for that.</li><li>Target API is 35; Play now asks for 36.</li><li>The version code is fixed at 1.</li></ul></div></li>
+      <li><div><h3>Back gesture quits mid-run; no pause on interruptions <span class="tag t-code">found in code</span></h3><p>Nothing handles the Android back request, and losing focus (an incoming call or the notification shade) doesn't pause the game. Loot not yet banked from the run is lost.</p></div></li>
+      <li><div><h3>No crash reporting, analytics or privacy policy <span class="tag t-ver">verified</span></h3><p>Without them a soft launch can't be measured and Play's Data safety form can't be completed. Play flags apps above a 1.09% crash rate or 0.47% ANR rate.</p></div></li>
+    </ol>
+    <p style="color:var(--dim);font-size:15.5px">Also confirmed:</p>
+    <ul class="plain" style="color:var(--dim);font-size:15.5px">
+      <li>Intel research cores are lost for good if you die after picking one up.</li>
+      <li>The hub teases "2 more weapons coming" that don't exist yet.</li>
+      <li>The icon has baked-in corners and no adaptive layers.</li>
+      <li>There's no cloud save.</li>
+      <li>About 6 MB of test files ship in the APK.</li>
+      <li>The QA bots write to the real save file.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Retention plan</h2>
+    <p>Each feature builds on systems the game already has. Contracts are data tables, so most daily and event content is configuration, not new code.</p>
+    <ol class="plan">
+      <li><div><h3>Guided first contract <span class="tag t-eff">4–6 days</span></h3><p>A scripted 3-minute sector-1 run built from the existing contract steps: one small hive, a molotov, a rocket "blast" and a short evac. It ends on the existing "Upgrade now" button.</p></div></li>
+      <li><div><h3>Daily Ops <span class="tag t-eff">~1 week</span></h3><p>Three seeded contracts a day. Each combines a layout, a step mix, a hive plan and one modifier (night ops, evac frenzy, no molotovs, brute hunt), and pays research cores plus a chest.</p></div></li>
+      <li><div><h3>7-day Supply Drop streak <span class="tag t-eff">2–3 days</span></h3><p>Login rewards delivered to the Outpost helipad, with a weapon camo on day 7.</p></div></li>
+      <li><div><h3>Hive Siege endless mode <span class="tag t-eff">~2 weeks</span></h3><p>Hives respawn in tiers on cleared layouts. Extract after wave 5 to bank your loot. A weekly seed feeds a Play Games leaderboard.</p></div></li>
+      <li><div><h3>Mastery stars and the missing arsenal <span class="tag t-eff">~3 weeks</span></h3><p>Three stars per contract (extract, find all intel, beat a time or damage target) give a reason to replay all 13. Ship the shotgun, the SMG and the remaining skills.</p></div></li>
+    </ol>
+    <p style="color:var(--dim);font-size:15.5px">After those, in order: a weekly Alpha Brute event, opt-in notifications, cloud save and achievements, Outpost offline income, then a 30-day pass once dailies and endless mode exist.</p>
+  </section>
+
+  <section>
+    <h2>Make it explosive</h2>
+    <ul class="plain">
+      <li><strong>Game feel:</strong> add a brief freeze and slow-motion when a hive bursts or the boss dies. Show the chopper landing in slow motion for the last 5 seconds of an evac. Add kill-streak callouts, and zoom the camera in or make characters 20–25% larger.</li>
+      <li><strong>Own the look:</strong> keep the stark white world and use crimson only for threats and blood. That contrast is the store page and the trailer.</li>
+      <li><strong>Moments worth sharing:</strong> chained hive bursts, last-second evacs and flashlight night ops. Add a share card after each run with kills, hives and extraction time.</li>
+      <li><strong>Store listing:</strong>
+        <ul class="plain">
+          <li>Title: "Protocol Crimson: Zombie Ops".</li>
+          <li>Short description: "Burn the hives, hold the LZ, extract alive."</li>
+          <li>A full-bleed icon that matches real gameplay, and check you have the rights to the current art.</li>
+          <li>A 1024×500 feature graphic and six captioned 1080×1920 screenshots.</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Monetization</h2>
+    <p>Free-to-play with a premium feel, tunable through remote config:</p>
+    <ul class="plain">
+      <li>Rewarded ads for double loot, recovering full loot after death, one revive per run and a daily drop.</li>
+      <li>A $3.99 Supporter pack and a starter pack.</li>
+      <li>Cosmetics: skins, camos, tracer colours, and blood and fire colours.</li>
+      <li>A 30-day pass once live content exists.</li>
+    </ul>
+    <p style="margin-top:6px"><strong>Guardrails:</strong></p>
+    <ul class="plain">
+      <li>No energy timers and no loot boxes.</li>
+      <li>No ads during combat and no forced interstitials at launch.</li>
+      <li>At most one paid revive per run.</li>
+      <li>Every gameplay item can be earned.</li>
+      <li>13+ audience, with Google's consent tool (UMP) for EU and UK players.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Google Play checklist</h2>
+    <div class="check">
+      <div><b class="x">MISSING</b>AAB via Godot Gradle build</div>
+      <div><b class="x">MISSING</b>Private upload key + Play App Signing</div>
+      <div><b class="x">MISSING</b>Target API 36 (now 35)</div>
+      <div><b class="x">MISSING</b>Version code bump process</div>
+      <div><b class="y">DONE</b>Min SDK 24</div>
+      <div><b class="y">DONE</b>64-bit (arm64)</div>
+      <div><b class="y">DONE</b>16 KB page size</div>
+      <div><b class="y">DONE</b>Package com.protocolcrimson.game</div>
+      <div><b class="y">DONE</b>No permissions requested</div>
+      <div><b class="x">MISSING</b>Privacy policy URL</div>
+      <div><b class="x">MISSING</b>Data safety form</div>
+      <div><b class="x">MISSING</b>Content rating (expect ~PEGI 16 / Teen–Mature)</div>
+      <div><b class="x">MISSING</b>Target audience 13+ or 16+</div>
+      <div><b class="x">MISSING</b>Ads / Advertising ID declaration</div>
+      <div><b class="p">PARTIAL</b>512 px icon (baked corners)</div>
+      <div><b class="x">MISSING</b>Adaptive + monochrome icon</div>
+      <div><b class="x">MISSING</b>Feature graphic + screenshots</div>
+      <div><b class="x">MISSING</b>Closed test: 12+ testers, 14 days</div>
+      <div><b class="x">MISSING</b>Crash reporting + analytics</div>
+      <div><b class="x">MISSING</b>Back-button handling</div>
+      <div><b class="p">PARTIAL</b>Edge-to-edge / safe areas</div>
+      <div><b class="p">PARTIAL</b>Exclude dev files from build</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Roadmap</h2>
+    <div class="phases">
+      <div class="phase"><div class="eyebrow">Weeks 1–3 · before soft launch</div><h3>Readiness sprint</h3><ul>
+        <li><strong>Week 1:</strong> AAB pipeline, private key, API 36, version-code bumps, exclude dev files, back button and auto-pause, intel fix, analytics and crash reporting, privacy policy.</li>
+        <li><strong>Week 2:</strong> tutorial; rebalance so an idle player loses 15–35% HP per sector-1 contract; global cap on hive defenders; game-feel effects.</li>
+        <li><strong>Week 3:</strong> Daily Ops, login streak, mastery stars, object pooling, performance pass on real phones, store assets, closed test with 20+ testers.</li></ul></div>
+      <div class="phase"><div class="eyebrow">6–8 weeks · soft launch</div><h3>Prove retention</h3><ul>
+        <li>Hive Siege and leaderboards.</li>
+        <li>Shotgun, SMG and the remaining skills.</li>
+        <li>Weekly boss event, notifications and cloud save.</li>
+        <li>Rewarded ads and packs.</li>
+        <li>A/B tests on stick side, auto-fire range and camera distance.</li></ul></div>
+      <div class="phase"><div class="eyebrow">After targets are met</div><h3>Global launch</h3><ul>
+        <li>30-day pass and localization.</li>
+        <li>Offline income and pre-registration.</li>
+        <li>Weekly events and monthly content drops.</li></ul></div>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Metric</th><th>Minimum to go global</th><th>Good</th></tr></thead>
+        <tbody>
+          <tr><td>Day-1 retention</td><td>35%</td><td>40%+</td></tr>
+          <tr><td>Day-7 retention</td><td>12%</td><td>15%+</td></tr>
+          <tr><td>Day-30 retention</td><td>4%</td><td>6%+</td></tr>
+          <tr><td>Session length</td><td>7 min</td><td>10–12 min</td></tr>
+          <tr><td>Sessions per daily user</td><td>2.5</td><td>3+</td></tr>
+          <tr><td>Crash-free users</td><td>99.5%</td><td>99.8%</td></tr>
+          <tr><td>ANR rate</td><td>&lt; 0.47%</td><td>&lt; 0.2%</td></tr>
+          <tr><td>Store page conversion</td><td>25%</td><td>35%+</td></tr>
+          <tr><td>Revenue per daily user</td><td>$0.03</td><td>$0.06+</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Strengths to double down on</h2>
+    <ul class="plain">
+      <li><strong>The loop:</strong> hives, then varied steps, then a tense evac where stepping out of the LZ pauses the countdown.</li>
+      <li><strong>Contracts as data:</strong> daily and event content is mostly configuration.</li>
+      <li><strong>Replay variety:</strong> hive placement is randomized each run.</li>
+      <li><strong>A fair economy:</strong> the vault is never penalized, and every payout shown is paid.</li>
+      <li><strong>Engineering:</strong> atomic saves, working multi-touch and automated QA bots that play every contract.</li>
+      <li><strong>A habit loop:</strong> the debrief's "Upgrade now" leads straight into the next run.</li>
+    </ul>
+  </section>
+
+  <p class="foot">How this was measured:</p>
+  <ul class="plain foot">
+    <li>Automated play-tests: a contract bot played all 13 contracts end to end with 0 failures. It teleports to objectives, so it doesn't test difficulty.</li>
+    <li>Idle and hive-fight damage probes.</li>
+    <li>A two-finger touch test that passed 10 of 10 checks.</li>
+    <li>Screenshot review, plus inspection of the APK manifest and the code.</li>
+  </ul>
+  <p class="foot">Not yet verified: on-device performance, audio quality on a phone, and safe-area cutouts.</p>
+</main>
