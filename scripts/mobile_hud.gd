@@ -131,34 +131,23 @@ func _ready() -> void:
 	_apply_release_ui()
 
 ## The game is portrait only (1080 x 1920 canvas).
+## Move stick on the right thumb, fire and abilities on the left.
 func _apply_portrait_layout() -> void:
-	# Joystick: 330 px, bottom-left
-	joystick.offset_left = 70.0
-	joystick.offset_top = -470.0
-	joystick.offset_right = 400.0
-	joystick.offset_bottom = -140.0
+	# Joystick: 330 px resting spot, bottom-right (it floats to wherever the thumb lands)
+	_place_bottom(joystick, 1.0, -400.0, -470.0, -70.0, -140.0)
 	
-	# Fire: 280 px round, bottom-right (tap = auto-fire on/off, hold/drag = aim)
-	fire_button.offset_left = -350.0
-	fire_button.offset_top = -420.0
-	fire_button.offset_right = -70.0
-	fire_button.offset_bottom = -140.0
+	# Fire: 280 px round, bottom-left (tap = auto-fire on/off, hold/drag = aim)
+	_place_bottom(fire_button, 0.0, 70.0, -420.0, 350.0, -140.0)
 	
 	# Abilities in an arc around the fire button
-	molotov_button.offset_left = -560.0
-	molotov_button.offset_top = -330.0
-	molotov_button.offset_right = -380.0
-	molotov_button.offset_bottom = -150.0
+	_place_bottom(molotov_button, 0.0, 380.0, -330.0, 560.0, -150.0)
+	_place_bottom(super_blast_button, 0.0, 90.0, -630.0, 270.0, -450.0)
+	_place_bottom(climb_button, 0.0, 330.0, -540.0, 480.0, -390.0)
 	
-	super_blast_button.offset_left = -270.0
-	super_blast_button.offset_top = -630.0
-	super_blast_button.offset_right = -90.0
-	super_blast_button.offset_bottom = -450.0
-	
-	climb_button.offset_left = -480.0
-	climb_button.offset_top = -540.0
-	climb_button.offset_right = -330.0
-	climb_button.offset_bottom = -390.0
+	# Combat controls are driven by the touch router (_input), not the GUI: Godot buttons
+	# only see the first finger, so with the stick held nothing else could be pressed.
+	for c: Control in [fire_button, molotov_button, super_blast_button, climb_button]:
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
 	if mission_pill:
 		mission_pill.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -166,6 +155,108 @@ func _apply_portrait_layout() -> void:
 		mission_pill.offset_right = -UIKit.MARGIN
 		mission_pill.offset_top = 260.0
 		mission_pill.offset_bottom = 340.0
+
+## Anchors a control to the bottom edge, to the left (anchor_x 0) or right (1) side.
+func _place_bottom(c: Control, anchor_x: float, left: float, top: float, right: float, bottom: float) -> void:
+	c.anchor_left = anchor_x
+	c.anchor_right = anchor_x
+	c.anchor_top = 1.0
+	c.anchor_bottom = 1.0
+	c.offset_left = left
+	c.offset_top = top
+	c.offset_right = right
+	c.offset_bottom = bottom
+
+
+# ─── Touch router ─────────────────────────────────────────────────────────────
+## Every finger is tracked on its own: touch index → what it pressed ("stick" or a button).
+var _touch_owner: Dictionary = {}
+## Extra px around a round button that still counts as pressing it
+const TOUCH_SLOP := 24.0
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		var t := event as InputEventScreenTouch
+		if t.pressed:
+			if get_tree().paused or not controls_root.visible:
+				return
+			var target: Variant = _touch_target(t.position)
+			if target == null:
+				return  # not a combat control: let the GUI have it (pause button, banners)
+			_touch_owner[t.index] = target
+			_touch_down(target, t.position)
+			get_viewport().set_input_as_handled()
+		elif _touch_owner.has(t.index):
+			_touch_up(_touch_owner[t.index])
+			_touch_owner.erase(t.index)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenDrag:
+		var d := event as InputEventScreenDrag
+		if _touch_owner.has(d.index):
+			_touch_drag(_touch_owner[d.index], d)
+			get_viewport().set_input_as_handled()
+
+
+## What a new touch at this canvas position grabs: a visible combat button, else the
+## stick if it lands in the stick zone (lower right of the screen), else nothing.
+func _touch_target(pos: Vector2) -> Variant:
+	for b: Control in [fire_button, super_blast_button, molotov_button, climb_button]:
+		if b.is_visible_in_tree() and b.get_global_rect().grow(TOUCH_SLOP).has_point(pos):
+			return b
+	var view := get_viewport().get_visible_rect().size
+	var zone := Rect2(view.x * 0.5, view.y * 0.5, view.x * 0.5, view.y * 0.5)
+	if joystick.is_visible_in_tree() and zone.has_point(pos):
+		return "stick"
+	return null
+
+
+func _touch_down(target: Variant, pos: Vector2) -> void:
+	if target is String:
+		joystick.begin(pos)
+	elif target == fire_button:
+		_on_fire_down()
+	elif target == molotov_button:
+		_on_molotov_down()
+	elif target == super_blast_button:
+		_on_super_blast_down()
+	elif target == climb_button:
+		_on_climb_pressed()
+
+
+func _touch_drag(target: Variant, d: InputEventScreenDrag) -> void:
+	if target is String:
+		joystick.move(d.position)
+		return
+	# The buttons' drag-aim handlers work in their own local space
+	var b := target as Control
+	var local := d.duplicate() as InputEventScreenDrag
+	local.position = b.get_global_transform().affine_inverse() * d.position
+	if b == fire_button:
+		_on_fire_gui_input(local)
+	elif b == molotov_button:
+		_on_molotov_gui_input(local)
+	elif b == super_blast_button:
+		_on_super_blast_gui_input(local)
+
+
+func _touch_up(target: Variant) -> void:
+	if target is String:
+		joystick.end()
+	elif target == fire_button:
+		_on_fire_up()
+	elif target == molotov_button:
+		_on_molotov_up()
+	elif target == super_blast_button:
+		_on_super_blast_up()
+
+
+## Lets go of every held control (pausing or leaving mid-touch must not leave the stick
+## pushed or the trigger held).
+func release_all_touches() -> void:
+	for idx in _touch_owner.keys():
+		_touch_up(_touch_owner[idx])
+	_touch_owner.clear()
+
 
 func _on_auto_fire_pressed() -> void:
 	if player:
@@ -529,6 +620,7 @@ func show_banner(title: String, sub: String = "") -> void:
 ## End-of-run debrief (extraction or KIA). Pauses the game; HUD runs with process_mode ALWAYS.
 ## Rewards first, then XP and level-up, then the next goal, then the actions.
 func show_mission_result(summary: Dictionary) -> void:
+	release_all_touches()
 	get_tree().paused = true
 	controls_root.visible = false
 	if _pause_btn:
@@ -691,6 +783,7 @@ func toggle_pause() -> void:
 	if _pause_layer:
 		resume_game()
 	elif not get_tree().paused:
+		release_all_touches()
 		get_tree().paused = true
 		_show_pause_menu()
 
